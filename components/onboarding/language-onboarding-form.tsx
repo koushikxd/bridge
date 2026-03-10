@@ -14,16 +14,24 @@ import {
   type PreferredLanguage,
   type PreferredLanguageForm,
 } from "@/lib/contracts/profile"
-import { copy } from "@/lib/copy"
 
 export function LanguageOnboardingForm({
   defaultLanguage,
   userName,
   userEmail,
+  uiText,
+  onComplete,
 }: {
   defaultLanguage: PreferredLanguage
   userName: string
   userEmail: string
+  uiText: {
+    onboardingLanguage: string
+    onboardingSubmit: string
+    onboardingSaving: string
+    onboardingBody: string
+  }
+  onComplete?: () => void
 }) {
   const router = useRouter()
   const upsertPreferredLanguage = useMutation(
@@ -42,8 +50,13 @@ export function LanguageOnboardingForm({
 
     try {
       await upsertPreferredLanguage(values)
-      router.replace("/")
-      router.refresh()
+
+      if (onComplete) {
+        onComplete()
+      } else {
+        router.replace("/")
+        router.refresh()
+      }
     } finally {
       setIsPending(false)
     }
@@ -55,17 +68,14 @@ export function LanguageOnboardingForm({
         <p className="text-sm font-medium text-foreground">{userName}</p>
         <p className="mt-1 text-sm text-muted-foreground">{userEmail}</p>
         <div className="mt-6 space-y-3 text-sm leading-6 text-muted-foreground">
-          <p>
-            Bridge stores your preferred language so results and alerts can be
-            translated for you.
-          </p>
+          <p>{uiText.onboardingBody}</p>
         </div>
       </div>
 
       <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
         <label className="block space-y-2">
           <span className="text-sm font-medium text-foreground">
-            {copy("onboarding.language")}
+            {uiText.onboardingLanguage}
           </span>
           <select
             className="w-full rounded-2xl border border-input bg-background px-4 py-3 text-sm text-foreground transition outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
@@ -84,7 +94,7 @@ export function LanguageOnboardingForm({
         </p>
 
         <Button size="lg" disabled={isPending}>
-          {isPending ? "Saving..." : copy("onboarding.submit")}
+          {isPending ? uiText.onboardingSaving : uiText.onboardingSubmit}
         </Button>
       </form>
     </div>
