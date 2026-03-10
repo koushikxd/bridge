@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "convex/_generated/**",
+    "convex/better-auth/_generated/**",
+    "public/sw.js",
+    "public/swe-worker-*.js",
   ]),
 ]);
 

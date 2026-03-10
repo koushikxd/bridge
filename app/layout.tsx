@@ -1,16 +1,28 @@
-import { Geist, Geist_Mono, Inter } from "next/font/google"
+import type { Metadata } from "next"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
 import { cn } from "@/lib/utils"
+import { Nunito_Sans } from "next/font/google";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const nunitoSans = Nunito_Sans({variable:'--font-sans'});
 
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
-})
+export const metadata: Metadata = {
+  title: "Bridge",
+  description:
+    "A multilingual health companion for patients and caregivers.",
+  applicationName: "Bridge",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-512.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icons/icon-192.svg", type: "image/svg+xml" }],
+  },
+}
 
 export default function RootLayout({
   children,
@@ -21,16 +33,14 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn(
-        "antialiased",
-        fontMono.variable,
-        "font-sans",
-        inter.variable
-      )}
+      className={cn("antialiased", "font-sans", nunitoSans.variable)}
     >
-      <body>
+      <body className="bg-background text-foreground">
         <ConvexClientProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <ThemeToggle />
+            {children}
+          </ThemeProvider>
         </ConvexClientProvider>
       </body>
     </html>
