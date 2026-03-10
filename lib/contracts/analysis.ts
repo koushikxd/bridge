@@ -8,6 +8,7 @@ export const artifactTypeSchema = z.enum([
   "food_label",
   "medicine_label",
   "menu",
+  "general",
 ])
 
 export const safetyStatusSchema = z.enum([

@@ -7,6 +7,7 @@ import {
   type ArtifactAnalysisRequest,
   type StructuredAnalysisResult,
 } from "@/lib/contracts/analysis"
+import { preferredLanguageLabels } from "@/lib/contracts/profile"
 
 export const bridgeAnalysisModel = google("gemini-2.5-flash")
 
@@ -61,10 +62,10 @@ export async function analyzeArtifact(
       model: bridgeAnalysisModel,
       schema: structuredAnalysisResultSchema,
       system:
-        "You are Bridge, a multilingual health companion. Return short, patient-friendly structured results. Mention uncertainty when text is unclear. Avoid long paragraphs.",
+        "You are Bridge, a multilingual health companion. Return short, patient-friendly structured results. Mention uncertainty when text is unclear. Avoid long paragraphs and keep every field concise.",
       prompt: `Analyze this ${input.artifactType.replaceAll("_", " ")} for a patient-facing health assistant. Return a short structured safety result. Keep wording practical, concise, and never act as a replacement for medical advice.${
         input.imageUrl ? `\n\nImage URL: ${input.imageUrl}` : ""
-      }${input.extractedText ? `\n\nOCR text:\n${input.extractedText}` : ""}`,
+      }${input.extractedText ? `\n\nOCR text:\n${input.extractedText}` : ""}\n\nWrite the response in ${preferredLanguageLabels[input.preferredLanguage]}. Use that language for detected item, why flagged, and suggested next action.`,
     })
 
     return result.object

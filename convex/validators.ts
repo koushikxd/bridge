@@ -21,7 +21,8 @@ export const artifactTypeValidator = v.union(
   v.literal("meal"),
   v.literal("food_label"),
   v.literal("medicine_label"),
-  v.literal("menu")
+  v.literal("menu"),
+  v.literal("general")
 )
 
 export const uploadStatusValidator = v.union(

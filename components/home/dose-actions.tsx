@@ -8,9 +8,15 @@ import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
 
 export function DoseActions({
+  labels,
   eventId,
   disabled,
 }: {
+  labels: {
+    skip: string
+    snooze: string
+    taken: string
+  }
   eventId: string
   disabled: boolean
 }) {
@@ -34,7 +40,7 @@ export function DoseActions({
         disabled={disabled}
       >
         <IconCheck data-icon="inline-start" />
-        Taken
+        {labels.taken}
       </Button>
       <Button
         size="lg"
@@ -44,7 +50,7 @@ export function DoseActions({
         disabled={disabled}
       >
         <IconClockPause data-icon="inline-start" />
-        Snooze
+        {labels.snooze}
       </Button>
       <Button
         size="lg"
@@ -54,7 +60,7 @@ export function DoseActions({
         disabled={disabled}
       >
         <IconX data-icon="inline-start" />
-        Skip
+        {labels.skip}
       </Button>
     </div>
   )

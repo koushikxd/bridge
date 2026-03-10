@@ -4,9 +4,14 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { authClient } from "@/lib/auth-client"
-import { copy } from "@/lib/copy"
 
-export function SignOutButton() {
+export function SignOutButton({
+  label,
+  pendingLabel,
+}: {
+  label: string
+  pendingLabel: string
+}) {
   const [isPending, setIsPending] = useState(false)
 
   return (
@@ -25,7 +30,7 @@ export function SignOutButton() {
       }}
       disabled={isPending}
     >
-      {isPending ? "Signing out..." : copy("home.signOut")}
+      {isPending ? pendingLabel : label}
     </Button>
   )
 }
