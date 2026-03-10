@@ -14,9 +14,13 @@ const transport = new DefaultChatTransport({ api: "/api/onboarding/chat" })
 
 export function OnboardingChat({
   userName,
+  onComplete,
+  locale,
   uiText,
 }: {
   userName: string
+  onComplete?: () => void
+  locale: string
   uiText: {
     chatEyebrow: string
     chatSubtitle: string
@@ -25,6 +29,7 @@ export function OnboardingChat({
     chatLoading: string
     chatDone: string
     chatError: string
+    chatKickoff: string
   }
 }) {
   const router = useRouter()
@@ -33,14 +38,16 @@ export function OnboardingChat({
   const hasSentInitial = useRef(false)
   const [input, setInput] = useState("")
   const [completed, setCompleted] = useState(false)
-  const completeOnboarding = useMutation(api.profiles.completeOnboarding)
+  const completeProfileQuestions = useMutation(
+    api.profiles.completeProfileQuestions
+  )
 
   const { messages, sendMessage, status, error } = useChat({
     transport,
     onFinish: ({ message }) => {
       const hasCompletion = message.parts.some(
         (part) =>
-          part.type === "tool-completeOnboarding" &&
+          part.type === "tool-completeProfileQuestions" &&
           part.state === "output-available"
       )
       if (hasCompletion) {
@@ -55,9 +62,16 @@ export function OnboardingChat({
   useEffect(() => {
     if (!hasSentInitial.current) {
       hasSentInitial.current = true
-      sendMessage({ text: "Hi, let's set up my profile!" })
+      sendMessage(
+        { text: uiText.chatKickoff },
+        {
+          body: {
+            locale,
+          },
+        }
+      )
     }
-  }, [sendMessage])
+  }, [locale, sendMessage, uiText.chatKickoff])
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -80,12 +94,17 @@ export function OnboardingChat({
   }
 
   async function handleSkipAll() {
-    await completeOnboarding({})
+    await completeProfileQuestions({})
     setCompleted(true)
   }
 
-  function handleGoHome() {
-    router.replace("/")
+  function handleContinue() {
+    if (onComplete) {
+      onComplete()
+      return
+    }
+
+    router.replace("/onboarding")
     router.refresh()
   }
 
@@ -126,6 +145,15 @@ export function OnboardingChat({
               > => p.type === "text"
             )
             if (textParts.length === 0) return null
+
+            const isKickoffMessage =
+              message.role === "user" &&
+              textParts.length === 1 &&
+              textParts[0]?.text === uiText.chatKickoff
+
+            if (isKickoffMessage) {
+              return null
+            }
 
             const isUser = message.role === "user"
             return (
@@ -173,7 +201,7 @@ export function OnboardingChat({
 
           {completed && (
             <div className="flex justify-center pt-4">
-              <Button size="lg" onClick={handleGoHome}>
+              <Button size="lg" onClick={handleContinue}>
                 {uiText.chatDone}
               </Button>
             </div>

@@ -5,14 +5,16 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
 import { cn } from "@/lib/utils"
-import { Nunito_Sans } from "next/font/google";
+import { Nunito_Sans } from "next/font/google"
 
-const nunitoSans = Nunito_Sans({variable:'--font-sans'});
+const nunitoSans = Nunito_Sans({
+  variable: "--font-sans",
+  subsets: ["latin"],
+})
 
 export const metadata: Metadata = {
   title: "Bridge",
-  description:
-    "A multilingual health companion for patients and caregivers.",
+  description: "A multilingual health companion for patients and caregivers.",
   applicationName: "Bridge",
   manifest: "/manifest.webmanifest",
   icons: {

@@ -2,90 +2,19 @@ import { defineSchema, defineTable } from "convex/server"
 import { v } from "convex/values"
 
 import { tables as authTables } from "./better-auth/schema"
-
-const preferredLanguageValidator = v.union(
-  v.literal("en"),
-  v.literal("hi"),
-  v.literal("es"),
-  v.literal("ar"),
-  v.literal("fr"),
-  v.literal("ta")
-)
-
-const reminderChannelValidator = v.union(
-  v.literal("in_app"),
-  v.literal("push"),
-  v.literal("email"),
-  v.literal("sms")
-)
-
-const artifactTypeValidator = v.union(
-  v.literal("prescription"),
-  v.literal("meal"),
-  v.literal("food_label"),
-  v.literal("medicine_label"),
-  v.literal("menu")
-)
-
-const uploadStatusValidator = v.union(
-  v.literal("uploaded"),
-  v.literal("processing"),
-  v.literal("processed"),
-  v.literal("failed")
-)
-
-const uploadSourceValidator = v.union(
-  v.literal("camera"),
-  v.literal("gallery"),
-  v.literal("file"),
-  v.literal("share")
-)
-
-const safetyStatusValidator = v.union(
-  v.literal("safe"),
-  v.literal("caution"),
-  v.literal("risky"),
-  v.literal("unknown")
-)
-
-const medicineRouteValidator = v.union(
-  v.literal("oral"),
-  v.literal("topical"),
-  v.literal("injection"),
-  v.literal("inhaled"),
-  v.literal("other")
-)
-
-const scheduleStatusValidator = v.union(
-  v.literal("active"),
-  v.literal("paused"),
-  v.literal("completed")
-)
-
-const dayOfWeekValidator = v.union(
-  v.literal("sun"),
-  v.literal("mon"),
-  v.literal("tue"),
-  v.literal("wed"),
-  v.literal("thu"),
-  v.literal("fri"),
-  v.literal("sat")
-)
-
-const adherenceEventTypeValidator = v.union(
-  v.literal("scheduled"),
-  v.literal("reminded"),
-  v.literal("taken"),
-  v.literal("skipped"),
-  v.literal("missed"),
-  v.literal("snoozed")
-)
-
-const caregiverLinkStatusValidator = v.union(
-  v.literal("pending"),
-  v.literal("active"),
-  v.literal("revoked")
-)
+import {
+  adherenceEventTypeValidator,
+  artifactTypeValidator,
+  caregiverLinkStatusValidator,
+  dayOfWeekValidator,
+  medicineRouteValidator,
+  preferredLanguageValidator,
+  reminderChannelValidator,
+  safetyStatusValidator,
+  scheduleStatusValidator,
+  uploadSourceValidator,
+  uploadStatusValidator,
+} from "./validators"
 
 export default defineSchema({
   ...authTables,
@@ -94,6 +23,14 @@ export default defineSchema({
     role: v.literal("patient"),
     preferredLanguage: preferredLanguageValidator,
     onboardingCompleted: v.boolean(),
+    onboardingStage: v.optional(
+      v.union(
+        v.literal("language"),
+        v.literal("chat"),
+        v.literal("medications"),
+        v.literal("completed")
+      )
+    ),
     age: v.optional(v.number()),
     allergies: v.optional(v.array(v.string())),
     chronicConditions: v.optional(v.array(v.string())),

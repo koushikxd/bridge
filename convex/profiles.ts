@@ -1,31 +1,9 @@
 import { v } from "convex/values"
 
 import { authComponent } from "./better-auth/auth"
-import {
-  mutation,
-  query,
-  type MutationCtx,
-  type QueryCtx,
-} from "./_generated/server"
-
-const preferredLanguageValidator = v.union(
-  v.literal("en"),
-  v.literal("hi"),
-  v.literal("es"),
-  v.literal("ar"),
-  v.literal("fr"),
-  v.literal("ta")
-)
-
-async function getProfileForUserId(
-  ctx: QueryCtx | MutationCtx,
-  userId: string
-) {
-  return await ctx.db
-    .query("profiles")
-    .withIndex("userId", (q) => q.eq("userId", userId))
-    .unique()
-}
+import { mutation, query } from "./_generated/server"
+import { getProfileForUserId } from "./profile_helpers"
+import { preferredLanguageValidator } from "./validators"
 
 export const getCurrentProfile = query({
   args: {},
@@ -47,6 +25,9 @@ export const upsertPreferredLanguage = mutation({
     if (existingProfile) {
       await ctx.db.patch(existingProfile._id, {
         preferredLanguage: args.preferredLanguage,
+        onboardingStage: existingProfile.onboardingCompleted
+          ? "completed"
+          : "chat",
         updatedAt: now,
       })
 
@@ -58,6 +39,7 @@ export const upsertPreferredLanguage = mutation({
       role: "patient",
       preferredLanguage: args.preferredLanguage,
       onboardingCompleted: false,
+      onboardingStage: "chat",
       createdAt: now,
       updatedAt: now,
     })
@@ -117,6 +99,60 @@ export const completeOnboarding = mutation({
 
     await ctx.db.patch(profile._id, {
       onboardingCompleted: true,
+      onboardingStage: "completed",
+      updatedAt: Date.now(),
+    })
+
+    return await ctx.db.get(profile._id)
+  },
+})
+
+export const completeProfileQuestions = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const user = await authComponent.getAuthUser(ctx)
+    const profile = await getProfileForUserId(ctx, user._id)
+
+    if (!profile) {
+      throw new Error("Profile not found. Complete language selection first.")
+    }
+
+    await ctx.db.patch(profile._id, {
+      onboardingStage: "medications",
+      updatedAt: Date.now(),
+    })
+
+    return await ctx.db.get(profile._id)
+  },
+})
+
+export const updateProfileSettings = mutation({
+  args: {
+    preferredLanguage: preferredLanguageValidator,
+    age: v.optional(v.union(v.number(), v.null())),
+    allergies: v.array(v.string()),
+    chronicConditions: v.array(v.string()),
+    dietaryRestrictions: v.array(v.string()),
+    religiousRestrictions: v.array(v.string()),
+    emergencyNotes: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.getAuthUser(ctx)
+    const profile = await getProfileForUserId(ctx, user._id)
+
+    if (!profile) {
+      throw new Error("Profile not found. Complete language selection first.")
+    }
+
+    await ctx.db.patch(profile._id, {
+      preferredLanguage: args.preferredLanguage,
+      age: args.age === null ? undefined : args.age,
+      allergies: args.allergies,
+      chronicConditions: args.chronicConditions,
+      dietaryRestrictions: args.dietaryRestrictions,
+      religiousRestrictions: args.religiousRestrictions,
+      emergencyNotes:
+        args.emergencyNotes === null ? undefined : args.emergencyNotes,
       updatedAt: Date.now(),
     })
 

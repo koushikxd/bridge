@@ -38,6 +38,7 @@ export function LanguageOnboardingForm({
     api.profiles.upsertPreferredLanguage
   )
   const [isPending, setIsPending] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const form = useForm<PreferredLanguageForm>({
     resolver: zodResolver(preferredLanguageSchema),
     defaultValues: {
@@ -46,6 +47,7 @@ export function LanguageOnboardingForm({
   })
 
   async function onSubmit(values: PreferredLanguageForm) {
+    setSubmitError(null)
     setIsPending(true)
 
     try {
@@ -57,6 +59,12 @@ export function LanguageOnboardingForm({
         router.replace("/")
         router.refresh()
       }
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Could not save your language right now."
+      )
     } finally {
       setIsPending(false)
     }
@@ -93,7 +101,9 @@ export function LanguageOnboardingForm({
           {form.formState.errors.preferredLanguage?.message ?? ""}
         </p>
 
-        <Button size="lg" disabled={isPending}>
+        <p className="min-h-5 text-xs text-destructive">{submitError ?? ""}</p>
+
+        <Button type="submit" size="lg" disabled={isPending}>
           {isPending ? uiText.onboardingSaving : uiText.onboardingSubmit}
         </Button>
       </form>

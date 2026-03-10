@@ -11,6 +11,7 @@ export function SignOutButton() {
 
   return (
     <Button
+      type="button"
       variant="outline"
       onClick={async () => {
         setIsPending(true)

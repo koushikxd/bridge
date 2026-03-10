@@ -18,7 +18,6 @@ export const onboardingTopics = [
   "age",
   "allergies",
   "chronicConditions",
-  "currentMedications",
   "dietaryRestrictions",
   "religiousRestrictions",
   "emergencyNotes",

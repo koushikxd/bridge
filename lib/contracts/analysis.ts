@@ -40,6 +40,7 @@ export const artifactAnalysisRequestSchema = z
 export type ArtifactAnalysisRequest = z.infer<
   typeof artifactAnalysisRequestSchema
 >
+export type ArtifactType = z.infer<typeof artifactTypeSchema>
 export type StructuredAnalysisResult = z.infer<
   typeof structuredAnalysisResultSchema
 >

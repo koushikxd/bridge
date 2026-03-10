@@ -10,7 +10,11 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as medications from "../medications.js";
+import type * as profile_helpers from "../profile_helpers.js";
 import type * as profiles from "../profiles.js";
+import type * as uploads from "../uploads.js";
+import type * as validators from "../validators.js";
 
 import type {
   ApiFromModules,
@@ -21,7 +25,11 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  medications: typeof medications;
+  profile_helpers: typeof profile_helpers;
   profiles: typeof profiles;
+  uploads: typeof uploads;
+  validators: typeof validators;
 }>;
 
 /**

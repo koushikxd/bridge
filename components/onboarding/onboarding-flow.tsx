@@ -3,20 +3,23 @@
 import { useState } from "react"
 
 import { LanguageOnboardingForm } from "@/components/onboarding/language-onboarding-form"
+import { MedicationOnboardingForm } from "@/components/onboarding/medication-onboarding-form"
 import { OnboardingChat } from "@/components/onboarding/onboarding-chat"
 import type { PreferredLanguage } from "@/lib/contracts/profile"
 
-type OnboardingStep = "language" | "chat"
+type OnboardingStep = "language" | "chat" | "medications"
 
 export function OnboardingFlow({
   initialStep,
   defaultLanguage,
+  locale,
   userName,
   userEmail,
   uiText,
 }: {
   initialStep: OnboardingStep
   defaultLanguage: PreferredLanguage
+  locale: string
   userName: string
   userEmail: string
   uiText: {
@@ -33,9 +36,25 @@ export function OnboardingFlow({
     chatLoading: string
     chatDone: string
     chatError: string
+    chatKickoff: string
+    medicationEyebrow: string
+    medicationTitle: string
+    medicationBody: string
+    medicationAdd: string
+    medicationAddTime: string
+    medicationSave: string
+    medicationSaving: string
+    medicationSkip: string
+    medicationName: string
+    medicationDosage: string
+    medicationPurpose: string
+    medicationInstructions: string
+    medicationDuration: string
+    medicationTimes: string
   }
 }) {
-  const [step, setStep] = useState<OnboardingStep>(initialStep)
+  const [stepOverride, setStepOverride] = useState<OnboardingStep | null>(null)
+  const step = stepOverride ?? initialStep
 
   if (step === "language") {
     return (
@@ -62,26 +81,52 @@ export function OnboardingFlow({
             onboardingSaving: uiText.onboardingSaving,
             onboardingBody: uiText.onboardingBody,
           }}
-          onComplete={() => setStep("chat")}
+          onComplete={() => setStepOverride("chat")}
+        />
+      </div>
+    )
+  }
+
+  if (step === "chat") {
+    return (
+      <div className="flex h-[calc(100svh-5rem)] w-full flex-col overflow-hidden rounded-[2rem] border border-border bg-card text-card-foreground shadow-sm">
+        <OnboardingChat
+          userName={userName}
+          onComplete={() => setStepOverride("medications")}
+          locale={locale}
+          uiText={{
+            chatEyebrow: uiText.chatEyebrow,
+            chatSubtitle: uiText.chatSubtitle,
+            chatPlaceholder: uiText.chatPlaceholder,
+            chatSkip: uiText.chatSkip,
+            chatLoading: uiText.chatLoading,
+            chatDone: uiText.chatDone,
+            chatError: uiText.chatError,
+            chatKickoff: uiText.chatKickoff,
+          }}
         />
       </div>
     )
   }
 
   return (
-    <div className="flex h-[calc(100svh-5rem)] w-full flex-col overflow-hidden rounded-[2rem] border border-border bg-card text-card-foreground shadow-sm">
-      <OnboardingChat
-        userName={userName}
-        uiText={{
-          chatEyebrow: uiText.chatEyebrow,
-          chatSubtitle: uiText.chatSubtitle,
-          chatPlaceholder: uiText.chatPlaceholder,
-          chatSkip: uiText.chatSkip,
-          chatLoading: uiText.chatLoading,
-          chatDone: uiText.chatDone,
-          chatError: uiText.chatError,
-        }}
-      />
-    </div>
+    <MedicationOnboardingForm
+      uiText={{
+        eyebrow: uiText.medicationEyebrow,
+        title: uiText.medicationTitle,
+        body: uiText.medicationBody,
+        addMedicine: uiText.medicationAdd,
+        addTime: uiText.medicationAddTime,
+        save: uiText.medicationSave,
+        saving: uiText.medicationSaving,
+        skip: uiText.medicationSkip,
+        medicineName: uiText.medicationName,
+        dosage: uiText.medicationDosage,
+        purpose: uiText.medicationPurpose,
+        instructions: uiText.medicationInstructions,
+        duration: uiText.medicationDuration,
+        times: uiText.medicationTimes,
+      }}
+    />
   )
 }
