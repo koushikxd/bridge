@@ -13,12 +13,12 @@ import { useEffect, useMemo, useRef, useState, type RefObject } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer"
 import {
   Sheet,
   SheetContent,
@@ -56,18 +56,10 @@ export function BridgeAssistantShell({
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen) {
-      setOpen(true)
-    }
-  }
-
-  const { messages, sendMessage, status, error } = useChat({
-    transport,
-  })
-
+  const { messages, sendMessage, status, error } = useChat({ transport })
   const isLoading = status === "streaming" || status === "submitted"
-  const content = useMemo(
+
+  const panel = useMemo(
     () => (
       <AssistantPanel
         error={error}
@@ -76,8 +68,8 @@ export function BridgeAssistantShell({
         messages={messages}
         preferredLanguage={preferredLanguage}
         scrollRef={scrollRef}
-        setInput={setInput}
         sendMessage={sendMessage}
+        setInput={setInput}
         textareaRef={textareaRef}
         uiText={uiText}
       />
@@ -85,66 +77,87 @@ export function BridgeAssistantShell({
     [error, input, isLoading, messages, preferredLanguage, sendMessage, uiText]
   )
 
-  return isMobile ? (
-    <Sheet open={open} onOpenChange={handleOpenChange} modal={false}>
-      <AssistantFab
-        label={uiText.triggerLabel}
-        onClick={() => setOpen((current) => !current)}
-      />
-      <SheetContent
-        side="bottom"
-        showCloseButton={false}
-        overlayClassName="bg-transparent backdrop-blur-none"
-        className="bottom-22 h-[min(88svh,760px)] rounded-[2rem_2rem_0_0] border-x border-t border-b-0 border-border/80 bg-[linear-gradient(180deg,color-mix(in_oklch,var(--card)_92%,white)_0%,color-mix(in_oklch,var(--card)_98%,var(--background))_100%)] p-0 shadow-[0_-26px_70px_-38px_rgba(15,23,42,0.34)]"
-      >
-        <SheetHeader className="border-b border-border/70 px-5 py-5">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/75 uppercase shadow-sm">
-            <IconSparkles className="size-3.5" />
-            {uiText.eyebrow}
-          </div>
-          <SheetTitle className="mt-3 text-[1.7rem] font-semibold tracking-[-0.04em] text-foreground">
-            {uiText.title}
-          </SheetTitle>
-          <SheetDescription className="max-w-xl text-[0.96rem] leading-7 text-muted-foreground">
-            {uiText.body}
-          </SheetDescription>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
-  ) : (
-    <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
-      <AssistantFab
-        label={uiText.triggerLabel}
-        onClick={() => setOpen((current) => !current)}
-      />
-      <DialogContent
-        showCloseButton={false}
-        overlayClassName="bg-transparent backdrop-blur-none"
-        className="top-auto right-6 bottom-24 left-auto grid h-[min(78svh,840px)] w-[min(30rem,calc(100vw-3rem))] translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-[2rem] border border-border/80 bg-[linear-gradient(180deg,color-mix(in_oklch,var(--card)_94%,white)_0%,color-mix(in_oklch,var(--card)_98%,var(--background))_100%)] p-0 shadow-[0_28px_90px_-42px_rgba(15,23,42,0.32)]"
-      >
-        <DialogHeader className="border-b border-border/70 px-6 py-5">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border/80 bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/75 uppercase shadow-sm">
-            <IconSparkles className="size-3.5" />
-            {uiText.eyebrow}
-          </div>
-          <DialogTitle className="mt-3 text-[2rem] font-semibold tracking-[-0.05em] text-foreground">
-            {uiText.title}
-          </DialogTitle>
-          <DialogDescription className="max-w-xl text-[0.98rem] leading-7 text-muted-foreground">
-            {uiText.body}
-          </DialogDescription>
-        </DialogHeader>
-        {content}
-      </DialogContent>
-    </Dialog>
+  return (
+    <>
+      {isMobile ? (
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerContent
+            overlayClassName="bg-black/20 backdrop-blur-none"
+            className="h-[88svh] rounded-t-[1.9rem] border-t border-border/80 bg-card p-0"
+          >
+            <DrawerHeader className="border-b border-border/70 px-5 pt-3 pb-4 text-left">
+              <MobileHeader uiText={uiText} />
+            </DrawerHeader>
+            {panel}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent
+            side="right"
+            showCloseButton={false}
+            overlayClassName="bg-black/0 backdrop-blur-none"
+            className="w-[28rem] border-l border-border/80 bg-card p-0 shadow-[0_16px_48px_-28px_rgba(15,23,42,0.22)] sm:max-w-[28rem]"
+          >
+            <SheetHeader className="border-b border-border/70 px-5 py-4">
+              <DesktopHeader uiText={uiText} />
+            </SheetHeader>
+            {panel}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {!open ? (
+        <AssistantFab
+          isOpen={open}
+          label={uiText.triggerLabel}
+          onClick={() => setOpen((current) => !current)}
+        />
+      ) : null}
+    </>
+  )
+}
+
+function MobileHeader({ uiText }: { uiText: AssistantText }) {
+  return (
+    <div className="space-y-3 text-left">
+      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/70 uppercase">
+        <IconSparkles className="size-3.5 text-primary" />
+        {uiText.eyebrow}
+      </div>
+      <DrawerTitle className="text-[1.8rem] font-semibold tracking-[-0.05em] text-foreground">
+        {uiText.title}
+      </DrawerTitle>
+      <DrawerDescription className="text-sm leading-7 text-muted-foreground">
+        {uiText.body}
+      </DrawerDescription>
+    </div>
+  )
+}
+
+function DesktopHeader({ uiText }: { uiText: AssistantText }) {
+  return (
+    <div className="space-y-3 text-left">
+      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/70 uppercase">
+        <IconSparkles className="size-3.5 text-primary" />
+        {uiText.eyebrow}
+      </div>
+      <SheetTitle className="text-[1.65rem] font-semibold tracking-[-0.05em] text-foreground">
+        {uiText.title}
+      </SheetTitle>
+      <SheetDescription className="text-sm leading-7 text-muted-foreground">
+        {uiText.body}
+      </SheetDescription>
+    </div>
   )
 }
 
 function AssistantFab({
+  isOpen,
   label,
   onClick,
 }: {
+  isOpen: boolean
   label: string
   onClick: () => void
 }) {
@@ -153,8 +166,9 @@ function AssistantFab({
       type="button"
       size="icon-lg"
       onClick={onClick}
-      className="fixed right-4 bottom-4 z-50 size-14 rounded-full border border-primary/18 bg-[linear-gradient(135deg,color-mix(in_oklch,var(--primary)_94%,white)_0%,var(--primary)_100%)] text-primary-foreground shadow-[0_16px_40px_-18px_rgba(16,185,129,0.72)] transition hover:scale-[1.03] hover:shadow-[0_20px_52px_-22px_rgba(16,185,129,0.82)] sm:right-6 sm:bottom-6"
       aria-label={label}
+      aria-pressed={isOpen}
+      className="fixed right-4 bottom-4 z-[60] size-14 rounded-full border border-primary/15 bg-primary text-primary-foreground shadow-[0_16px_40px_-18px_rgba(16,185,129,0.72)] transition hover:scale-[1.03] sm:right-6 sm:bottom-6"
     >
       <IconMessageCircle2 className="size-6" />
     </Button>
@@ -211,15 +225,16 @@ function AssistantPanel({
         },
       }
     )
+
     setInput("")
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-        <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-3">
           {messages.length === 0 ? (
-            <div className="rounded-[1.75rem] border border-dashed border-border/80 bg-background/70 px-5 py-6 text-sm leading-7 text-muted-foreground shadow-sm">
+            <div className="rounded-[1.15rem] border border-border bg-background px-4 py-4 text-sm leading-7 text-muted-foreground">
               {uiText.empty}
             </div>
           ) : null}
@@ -248,8 +263,8 @@ function AssistantPanel({
                 <div
                   className={
                     isUser
-                      ? "max-w-[84%] rounded-[1.55rem] rounded-br-md bg-primary px-4 py-3 text-sm leading-7 text-primary-foreground shadow-[0_12px_30px_-18px_rgba(16,185,129,0.7)]"
-                      : "max-w-[86%] rounded-[1.55rem] rounded-bl-md border border-border/70 bg-background/92 px-4 py-3 text-sm leading-7 text-foreground shadow-sm"
+                      ? "max-w-[82%] rounded-[1.2rem] rounded-br-sm bg-primary px-4 py-3 text-sm leading-7 text-primary-foreground"
+                      : "max-w-[88%] rounded-[1.2rem] rounded-bl-sm border border-border bg-background px-4 py-3 text-sm leading-7 text-foreground"
                   }
                 >
                   {textParts.map((part) => (
@@ -267,7 +282,7 @@ function AssistantPanel({
 
           {isLoading ? (
             <div className="flex justify-start">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/85 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
                 <IconLoader2 className="size-4 animate-spin" />
                 {uiText.loading}
               </div>
@@ -275,7 +290,7 @@ function AssistantPanel({
           ) : null}
 
           {error ? (
-            <div className="inline-flex items-center gap-2 rounded-[1rem] border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <div className="inline-flex items-center gap-2 rounded-[1rem] border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               <IconAlertCircle className="size-4" />
               {uiText.error}
             </div>
@@ -283,8 +298,8 @@ function AssistantPanel({
         </div>
       </div>
 
-      <div className="border-t border-border/70 bg-[color-mix(in_oklch,var(--background)_72%,var(--card))] px-4 py-4 sm:px-6">
-        <div className="mx-auto flex max-w-2xl items-end gap-3">
+      <div className="border-t border-border/70 bg-card px-4 py-4 sm:px-5">
+        <div className="flex items-end gap-3">
           <Textarea
             ref={textareaRef}
             value={input}
@@ -297,14 +312,14 @@ function AssistantPanel({
             }}
             placeholder={uiText.placeholder}
             disabled={isLoading}
-            className="min-h-26 rounded-[1.6rem] border-border/80 bg-background px-4 py-3.5 text-sm leading-7 shadow-sm"
+            className="min-h-24 rounded-[1.2rem] border-border bg-background px-4 py-3 text-sm leading-7 shadow-none"
           />
           <Button
             type="button"
             size="icon-lg"
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className="mb-1 shrink-0 rounded-full shadow-[0_12px_24px_-16px_rgba(16,185,129,0.72)]"
+            className="mb-1 shrink-0 rounded-full"
             aria-label={uiText.send}
           >
             <IconSend className="size-4.5" />
