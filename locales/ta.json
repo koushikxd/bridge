@@ -202,5 +202,7 @@
   "scan.status.uploaded": "பதிவேற்றப்பட்டது",
   "scan.status.processing": "செயலாக்கப்படுகிறது",
   "scan.status.processed": "செயலாக்க முடிந்தது",
-  "scan.status.failed": "தவறியது"
+  "scan.status.failed": "தவறியது",
+  "scan.scanMore": "மேலும் ஸ்கேன் செய்",
+  "scan.processingHint": "இது பொதுவாக சில விநாடிகள் ஆகும். Bridge பகுப்பாய்வை முடிக்கும் வரை இந்த திரையை திறந்தபடி வைத்திருங்கள்."
 }

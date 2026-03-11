@@ -202,5 +202,7 @@
   "scan.status.uploaded": "تم الرفع",
   "scan.status.processing": "جارٍ المعالجة",
   "scan.status.processed": "تمت المعالجة",
-  "scan.status.failed": "فشل"
+  "scan.status.failed": "فشل",
+  "scan.scanMore": "فحص صورة أخرى",
+  "scan.processingHint": "يستغرق هذا عادة بضع ثوانٍ. أبقِ هذه الشاشة مفتوحة بينما ينهي Bridge التحليل."
 }

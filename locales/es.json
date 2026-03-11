@@ -202,5 +202,7 @@
   "scan.status.uploaded": "Subido",
   "scan.status.processing": "Procesando",
   "scan.status.processed": "Procesado",
-  "scan.status.failed": "Fallido"
+  "scan.status.failed": "Fallido",
+  "scan.scanMore": "Escanear otra imagen",
+  "scan.processingHint": "Esto suele tardar unos segundos. Mantén esta pantalla abierta mientras Bridge termina el análisis."
 }

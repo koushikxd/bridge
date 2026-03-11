@@ -1,7 +1,13 @@
+import { IconArrowLeft, IconSparkles } from "@tabler/icons-react"
 import Image from "next/image"
+import Link from "next/link"
 import { notFound, redirect } from "next/navigation"
 
+import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
+import { ScanProcessor } from "@/components/upload/scan-processor"
 import { api } from "@/convex/_generated/api"
+import type { Id } from "@/convex/_generated/dataModel"
 import { requireCompletedOnboarding } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
 import { localizedCopy } from "@/lib/copy"
@@ -21,6 +27,41 @@ function toneClass(status: string) {
       return "border-destructive/25 bg-destructive/10 text-foreground"
     default:
       return "border-border bg-muted/60 text-foreground"
+  }
+}
+
+function pillClass(status: string) {
+  switch (status) {
+    case "safe":
+      return "border-primary/20 bg-primary/10 text-foreground"
+    case "caution":
+      return "border-chart-4/25 bg-chart-4/12 text-foreground"
+    case "risky":
+    case "failed":
+      return "border-destructive/25 bg-destructive/10 text-foreground"
+    default:
+      return "border-border/80 bg-muted/70 text-muted-foreground"
+  }
+}
+
+interface RichData {
+  ingredients?: string[]
+  allergens?: string[]
+  nutritionHighlights?: string[]
+  medicines?: {
+    name: string
+    dosage?: string
+    purpose?: string
+    instructions?: string
+  }[]
+}
+
+function parseRichData(raw: string | undefined): RichData | null {
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as RichData
+  } catch {
+    return null
   }
 }
 
@@ -44,7 +85,10 @@ export default async function ScanResultPage({
     notFound()
   }
 
+  const lang = profile.preferredLanguage
+
   const [
+    backHomeLabel,
     imageLabel,
     resultLabel,
     processingLabel,
@@ -65,27 +109,56 @@ export default async function ScanResultPage({
     processingStatus,
     processedStatus,
     failedStatus,
+    ingredientsLabel,
+    allergensLabel,
+    nutritionLabel,
+    medicinesLabel,
+    dosageLabel,
+    purposeLabel,
+    instructionsLabel,
+    flaggedAllergensLabel,
+    flaggedIngredientsLabel,
+    profileMatchesLabel,
+    retryButtonLabel,
+    retryingLabel,
+    scanMoreLabel,
+    processingHintLabel,
   ] = await Promise.all([
-    localizedCopy("scan.image", profile.preferredLanguage),
-    localizedCopy("scan.result", profile.preferredLanguage),
-    localizedCopy("scan.processing", profile.preferredLanguage),
-    localizedCopy("scan.previewUnavailable", profile.preferredLanguage),
-    localizedCopy("scan.safetyStatus", profile.preferredLanguage),
-    localizedCopy("scan.why", profile.preferredLanguage),
-    localizedCopy("scan.next", profile.preferredLanguage),
-    localizedCopy("scan.confidence", profile.preferredLanguage),
-    localizedCopy("scan.pending", profile.preferredLanguage),
-    localizedCopy("scan.ocrConfidence", profile.preferredLanguage),
-    localizedCopy("scan.reviewing", profile.preferredLanguage),
-    localizedCopy("scan.retry", profile.preferredLanguage),
-    localizedCopy("scan.status.safe", profile.preferredLanguage),
-    localizedCopy("scan.status.caution", profile.preferredLanguage),
-    localizedCopy("scan.status.risky", profile.preferredLanguage),
-    localizedCopy("scan.status.unknown", profile.preferredLanguage),
-    localizedCopy("scan.status.uploaded", profile.preferredLanguage),
-    localizedCopy("scan.status.processing", profile.preferredLanguage),
-    localizedCopy("scan.status.processed", profile.preferredLanguage),
-    localizedCopy("scan.status.failed", profile.preferredLanguage),
+    localizedCopy("settings.backHome", lang),
+    localizedCopy("scan.image", lang),
+    localizedCopy("scan.result", lang),
+    localizedCopy("scan.processing", lang),
+    localizedCopy("scan.previewUnavailable", lang),
+    localizedCopy("scan.safetyStatus", lang),
+    localizedCopy("scan.why", lang),
+    localizedCopy("scan.next", lang),
+    localizedCopy("scan.confidence", lang),
+    localizedCopy("scan.pending", lang),
+    localizedCopy("scan.ocrConfidence", lang),
+    localizedCopy("scan.reviewing", lang),
+    localizedCopy("scan.retry", lang),
+    localizedCopy("scan.status.safe", lang),
+    localizedCopy("scan.status.caution", lang),
+    localizedCopy("scan.status.risky", lang),
+    localizedCopy("scan.status.unknown", lang),
+    localizedCopy("scan.status.uploaded", lang),
+    localizedCopy("scan.status.processing", lang),
+    localizedCopy("scan.status.processed", lang),
+    localizedCopy("scan.status.failed", lang),
+    localizedCopy("scan.ingredients", lang),
+    localizedCopy("scan.allergens", lang),
+    localizedCopy("scan.nutrition", lang),
+    localizedCopy("scan.medicines", lang),
+    localizedCopy("scan.dosage", lang),
+    localizedCopy("scan.purpose", lang),
+    localizedCopy("scan.instructions", lang),
+    localizedCopy("scan.flaggedAllergens", lang),
+    localizedCopy("scan.flaggedIngredients", lang),
+    localizedCopy("scan.profileMatches", lang),
+    localizedCopy("scan.retryButton", lang),
+    localizedCopy("scan.retrying", lang),
+    localizedCopy("scan.scanMore", lang),
+    localizedCopy("scan.processingHint", lang),
   ])
 
   const statusLabels: Record<string, string> = {
@@ -99,70 +172,305 @@ export default async function ScanResultPage({
     uploaded: uploadedStatus,
   }
 
+  const analysis = result.analysis
+  const safetyStatus = analysis?.safetyStatus ?? "unknown"
+  const isProcessing =
+    !analysis &&
+    (result.upload.status === "uploaded" ||
+      result.upload.status === "processing")
   const displayStatus =
-    statusLabels[result.analysis?.safetyStatus ?? result.upload.status] ??
+    statusLabels[analysis?.safetyStatus ?? result.upload.status] ??
     unknownStatus
+  const previewStatus = statusLabels[result.upload.status] ?? processingLabel
+  const title =
+    analysis?.detectedItem ??
+    (result.upload.status === "failed" ? failedStatus : processingLabel)
 
-  const confidenceText = result.analysis
-    ? `${Math.round(result.analysis.confidence * 100)}%`
+  const confidenceText = analysis
+    ? `${Math.round(analysis.confidence * 100)}%`
     : result.upload.ocrConfidence
       ? `${Math.round(result.upload.ocrConfidence)}% ${ocrConfidenceLabel}`
       : pendingLabel
 
+  const richData = parseRichData(analysis?.rawSummary)
+  const showRetry =
+    result.upload.status === "failed" ||
+    (!!analysis &&
+      (safetyStatus === "unknown" || (analysis.confidence ?? 0) < 0.4))
+
   return (
-    <main className="min-h-svh bg-background px-4 py-6 sm:px-6 sm:py-10">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 lg:grid lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="rounded-[2rem] border border-border/80 bg-card p-5 shadow-sm sm:p-6">
-          <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
-            {imageLabel}
-          </p>
-          {result.fileUrl ? (
-            <Image
-              src={result.fileUrl}
-              alt={result.upload.fileName}
-              width={1200}
-              height={900}
-              className="mt-4 w-full rounded-[1.5rem] border border-border/80 object-cover"
-            />
-          ) : (
-            <div className="mt-4 rounded-[1.5rem] border border-dashed border-border/80 p-10 text-sm text-muted-foreground">
-              {previewUnavailableLabel}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-[2rem] border border-border/80 bg-card p-5 shadow-sm sm:p-6">
-          <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
-            {resultLabel}
-          </p>
-
-          <div
-            className={`mt-4 rounded-[1.5rem] border px-4 py-4 ${toneClass(result.analysis?.safetyStatus ?? "unknown")}`}
+    <main className="min-h-svh bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_10%,transparent),transparent_34%),linear-gradient(to_bottom,_color-mix(in_oklch,var(--muted)_42%,transparent),transparent_24%)] px-4 py-5 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-border/70 bg-background/85 px-4 text-sm font-medium text-muted-foreground backdrop-blur transition hover:text-foreground"
           >
-            <p className="text-lg font-semibold tracking-tight text-foreground">
-              {result.analysis?.detectedItem ?? processingLabel}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {safetyStatusLabel}: {displayStatus}
-            </p>
-          </div>
+            <IconArrowLeft className="size-4" />
+            {backHomeLabel}
+          </Link>
+        </div>
 
-          <div className="mt-5 grid gap-4 text-sm leading-6 text-muted-foreground">
-            <ResultItem
-              label={whyLabel}
-              value={
-                result.analysis?.whyFlagged ??
-                result.upload.processingError ??
-                reviewingLabel
-              }
-            />
-            <ResultItem
-              label={nextLabel}
-              value={result.analysis?.suggestedNextAction ?? retryLabel}
-            />
-            <ResultItem label={confidenceLabel} value={confidenceText} />
-          </div>
-        </section>
+        <div className="mt-5 grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <section className="order-2 h-fit rounded-[2rem] border border-border/80 bg-card/95 p-4 shadow-sm sm:p-5 xl:sticky xl:top-6 xl:order-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
+                {imageLabel}
+              </p>
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold tracking-[0.16em] uppercase ${pillClass(isProcessing ? result.upload.status : safetyStatus)}`}
+              >
+                {isProcessing ? previewStatus : displayStatus}
+              </span>
+            </div>
+
+            {result.fileUrl ? (
+              <div className="relative mt-4 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-border/80 bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_10%,transparent),transparent_48%),color-mix(in_oklch,var(--muted)_58%,var(--background))]">
+                <Image
+                  src={result.fileUrl}
+                  alt={result.upload.fileName}
+                  fill
+                  className="object-contain p-3"
+                  sizes="(max-width: 1279px) 100vw, 320px"
+                />
+              </div>
+            ) : (
+              <div className="mt-4 rounded-[1.5rem] border border-dashed border-border/80 p-10 text-sm text-muted-foreground">
+                {previewUnavailableLabel}
+              </div>
+            )}
+
+            <div className="mt-4 rounded-[1.25rem] border border-border/70 bg-background/80 px-4 py-3">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {result.upload.fileName}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {safetyStatusLabel}:{" "}
+                {isProcessing ? previewStatus : displayStatus}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {confidenceLabel}: {confidenceText}
+              </p>
+            </div>
+          </section>
+
+          <section className="order-1 rounded-[2rem] border border-border/80 bg-card/95 p-5 shadow-sm sm:p-6 xl:order-2">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-3">
+                <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
+                  {resultLabel}
+                </p>
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                    {title}
+                  </h1>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                    {isProcessing
+                      ? reviewingLabel
+                      : (analysis?.whyFlagged ??
+                        result.upload.processingError ??
+                        reviewingLabel)}
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold tracking-[0.16em] uppercase ${pillClass(isProcessing ? result.upload.status : safetyStatus)}`}
+              >
+                {isProcessing ? previewStatus : displayStatus}
+              </div>
+            </div>
+
+            {isProcessing ? (
+              <>
+                <div className="mt-6 rounded-[1.75rem] border border-border/70 bg-background/85 p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                      <Spinner className="size-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <span>{processingLabel}</span>
+                        <span className="size-2 animate-pulse rounded-full bg-primary" />
+                      </div>
+                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                        {processingHintLabel}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    <ProcessingCard label={safetyStatusLabel} />
+                    <ProcessingCard label={confidenceLabel} />
+                    <ProcessingCard label={nextLabel} />
+                  </div>
+
+                  <div className="mt-4 rounded-[1.25rem] border border-border/70 bg-card/80 p-4">
+                    <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                      <IconSparkles className="size-3.5" />
+                      {reviewingLabel}
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      <Skeleton className="h-4 w-11/12" />
+                      <Skeleton className="h-4 w-9/12" />
+                      <Skeleton className="h-4 w-10/12" />
+                    </div>
+                  </div>
+                </div>
+
+                <ScanProcessor
+                  uploadId={result.upload._id as Id<"uploads">}
+                  uploadStatus={result.upload.status}
+                  hasAnalysis={Boolean(analysis)}
+                  label={retryButtonLabel}
+                  busyLabel={processingLabel}
+                  showButton={false}
+                />
+              </>
+            ) : (
+              <>
+                <div
+                  className={`mt-6 rounded-[1.5rem] border px-4 py-4 ${toneClass(safetyStatus)}`}
+                >
+                  <p className="text-lg font-semibold tracking-tight text-foreground">
+                    {title}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {safetyStatusLabel}: {displayStatus}
+                  </p>
+                </div>
+
+                <div className="mt-5 grid gap-4 text-sm leading-6 text-muted-foreground sm:grid-cols-3">
+                  <ResultItem
+                    label={whyLabel}
+                    value={
+                      analysis?.whyFlagged ??
+                      result.upload.processingError ??
+                      reviewingLabel
+                    }
+                  />
+                  <ResultItem
+                    label={nextLabel}
+                    value={analysis?.suggestedNextAction ?? retryLabel}
+                  />
+                  <ResultItem label={confidenceLabel} value={confidenceText} />
+                </div>
+
+                {analysis?.flaggedAllergens &&
+                  analysis.flaggedAllergens.length > 0 && (
+                    <div className="mt-4">
+                      <TagList
+                        label={flaggedAllergensLabel}
+                        items={analysis.flaggedAllergens}
+                        variant="danger"
+                      />
+                    </div>
+                  )}
+
+                {analysis?.flaggedIngredients &&
+                  analysis.flaggedIngredients.length > 0 && (
+                    <div className="mt-4">
+                      <TagList
+                        label={flaggedIngredientsLabel}
+                        items={analysis.flaggedIngredients}
+                        variant="warning"
+                      />
+                    </div>
+                  )}
+
+                {analysis?.matchedProfileRules &&
+                  analysis.matchedProfileRules.length > 0 && (
+                    <div className="mt-4">
+                      <ResultItem
+                        label={profileMatchesLabel}
+                        value={analysis.matchedProfileRules.join(" · ")}
+                      />
+                    </div>
+                  )}
+
+                {richData?.medicines && richData.medicines.length > 0 && (
+                  <div className="mt-5">
+                    <p className="mb-3 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                      {medicinesLabel}
+                    </p>
+                    <div className="grid gap-3">
+                      {richData.medicines.map((med) => (
+                        <div
+                          key={med.name}
+                          className="rounded-[1.25rem] border border-border/70 bg-background px-4 py-3"
+                        >
+                          <p className="text-sm font-semibold text-foreground">
+                            {med.name}
+                          </p>
+                          {med.dosage && (
+                            <Detail label={dosageLabel} value={med.dosage} />
+                          )}
+                          {med.purpose && (
+                            <Detail label={purposeLabel} value={med.purpose} />
+                          )}
+                          {med.instructions && (
+                            <Detail
+                              label={instructionsLabel}
+                              value={med.instructions}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {richData?.ingredients && richData.ingredients.length > 0 && (
+                  <div className="mt-4">
+                    <TagList
+                      label={ingredientsLabel}
+                      items={richData.ingredients}
+                      variant="neutral"
+                    />
+                  </div>
+                )}
+
+                {richData?.allergens && richData.allergens.length > 0 && (
+                  <div className="mt-4">
+                    <TagList
+                      label={allergensLabel}
+                      items={richData.allergens}
+                      variant="warning"
+                    />
+                  </div>
+                )}
+
+                {richData?.nutritionHighlights &&
+                  richData.nutritionHighlights.length > 0 && (
+                    <div className="mt-4">
+                      <ResultItem
+                        label={nutritionLabel}
+                        value={richData.nutritionHighlights.join(" · ")}
+                      />
+                    </div>
+                  )}
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href="/scan"
+                    className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+                  >
+                    {scanMoreLabel}
+                  </Link>
+                  {showRetry && (
+                    <ScanProcessor
+                      uploadId={result.upload._id as Id<"uploads">}
+                      uploadStatus={result.upload.status}
+                      hasAnalysis={Boolean(analysis)}
+                      label={retryButtonLabel}
+                      busyLabel={retryingLabel}
+                      className="h-11 rounded-xl"
+                    />
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+        </div>
       </div>
     </main>
   )
@@ -175,6 +483,62 @@ function ResultItem({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="mt-1.5 text-sm leading-6 text-foreground/88">{value}</p>
+    </div>
+  )
+}
+
+function ProcessingCard({ label }: { label: string }) {
+  return (
+    <div className="rounded-[1.25rem] border border-border/70 bg-card/80 px-4 py-3">
+      <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-4 w-4/5" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    </div>
+  )
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <p className="mt-1 text-xs text-muted-foreground">
+      <span className="font-medium">{label}:</span> {value}
+    </p>
+  )
+}
+
+function TagList({
+  label,
+  items,
+  variant,
+}: {
+  label: string
+  items: string[]
+  variant: "danger" | "warning" | "neutral"
+}) {
+  const tagColors = {
+    danger: "bg-destructive/12 text-destructive border-destructive/20",
+    warning: "bg-chart-4/12 text-chart-4 border-chart-4/20",
+    neutral: "bg-muted text-muted-foreground border-border/70",
+  }
+
+  return (
+    <div className="rounded-[1.25rem] border border-border/70 bg-background px-4 py-3">
+      <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {items.map((item) => (
+          <span
+            key={item}
+            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${tagColors[variant]}`}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

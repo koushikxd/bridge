@@ -24,6 +24,7 @@ import { api } from "@/convex/_generated/api"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { ArtifactType } from "@/lib/contracts/analysis"
 import type { UploadSource } from "@/lib/contracts/upload"
+import { compressImage } from "@/lib/image"
 import { cn } from "@/lib/utils"
 
 const defaultArtifactType: ArtifactType = "general"
@@ -65,7 +66,7 @@ export function ScanUploadDialog({
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const generateUploadUrl = useMutation(api.uploads.generateUploadUrl)
   const createUploadRecord = useMutation(api.uploads.createUploadRecord)
-  const processUpload = useAction(api.uploads.processUpload)
+  const processUpload = useAction(api.uploadActions.processUpload)
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -76,11 +77,12 @@ export function ScanUploadDialog({
     setStatus(uploadingLabel)
 
     try {
+      const compressed = await compressImage(file)
       const postUrl = await generateUploadUrl({})
       const uploadResponse = await fetch(postUrl, {
         method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": compressed.type },
+        body: compressed,
       })
 
       const { storageId } = (await uploadResponse.json()) as {
@@ -90,9 +92,9 @@ export function ScanUploadDialog({
       const uploadId = await createUploadRecord({
         artifactType: defaultArtifactType,
         source,
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
+        fileName: compressed.name,
+        mimeType: compressed.type,
+        fileSize: compressed.size,
         storageId: storageId as never,
       })
 

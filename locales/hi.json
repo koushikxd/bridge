@@ -202,5 +202,7 @@
   "scan.status.uploaded": "अपलोड किया गया",
   "scan.status.processing": "प्रोसेस हो रहा है",
   "scan.status.processed": "प्रोसेस्ड",
-  "scan.status.failed": "असफल"
+  "scan.status.failed": "असफल",
+  "scan.scanMore": "और स्कैन करें",
+  "scan.processingHint": "इसमें आमतौर पर कुछ सेकंड लगते हैं। ब्रिज विश्लेषण पूरा करे तब तक इस स्क्रीन को खुला रखें।"
 }

@@ -1,9 +1,10 @@
-import { createWorker, type WorkerOptions } from "tesseract.js"
+import { createWorker } from "tesseract.js"
+
+import type { PreferredLanguage } from "@/lib/contracts/profile"
 
 export type OcrImageInput = {
   imageUrl: string
-  languages?: string[]
-  options?: Partial<WorkerOptions>
+  preferredLanguage?: PreferredLanguage
 }
 
 export type OcrResult = {
@@ -11,20 +12,29 @@ export type OcrResult = {
   confidence: number
 }
 
-export function isImageOcrReady() {
-  return true
+const languageMap: Record<PreferredLanguage, string[]> = {
+  en: ["eng"],
+  es: ["spa", "eng"],
+  fr: ["fra", "eng"],
+  hi: ["hin", "eng"],
+  ar: ["ara", "eng"],
+  ta: ["tam", "eng"],
 }
 
+/**
+ * Extract text from an image using Tesseract.js.
+ * Used as Tier 2 fallback when Gemini Vision fails.
+ * Selects languages based on user's preferred language instead of loading all.
+ */
 export async function extractImageText(
   input: OcrImageInput
 ): Promise<OcrResult> {
-  void input.options
-  const languages = input.languages?.length
-    ? input.languages
-    : ["eng", "spa", "fra", "deu", "ita", "por", "jpn", "chi_sim"]
+  const langs = input.preferredLanguage
+    ? languageMap[input.preferredLanguage]
+    : ["eng", "jpn", "chi_sim", "spa", "fra"]
 
   try {
-    const worker = await createWorker(languages)
+    const worker = await createWorker(langs)
     const result = await worker.recognize(input.imageUrl)
     await worker.terminate()
 

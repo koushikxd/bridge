@@ -202,5 +202,7 @@
   "scan.status.uploaded": "Importée",
   "scan.status.processing": "Traitement",
   "scan.status.processed": "Traitée",
-  "scan.status.failed": "Échec"
+  "scan.status.failed": "Échec",
+  "scan.scanMore": "Scanner autre chose",
+  "scan.processingHint": "Cela prend en general quelques secondes. Gardez cet ecran ouvert pendant que Bridge termine l'analyse."
 }

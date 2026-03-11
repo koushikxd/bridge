@@ -1,9 +1,6 @@
 import { v } from "convex/values"
 
-import { analyzeArtifact } from "../lib/services/ai-analysis"
-import { extractImageText } from "../lib/services/ocr"
-import { api } from "./_generated/api"
-import { action, mutation, query } from "./_generated/server"
+import { mutation, query } from "./_generated/server"
 import { requireCurrentProfile } from "./profile_helpers"
 import {
   artifactTypeValidator,
@@ -77,67 +74,6 @@ export const getUploadResult = query({
   },
 })
 
-export const processUpload = action({
-  args: {
-    uploadId: v.id("uploads"),
-  },
-  handler: async (ctx, args) => {
-    const upload = await ctx.runQuery(api.uploads.getUploadForProcessing, {
-      uploadId: args.uploadId,
-    })
-
-    if (!upload) {
-      throw new Error("Upload not found.")
-    }
-
-    await ctx.runMutation(api.uploads.markUploadStatus, {
-      uploadId: args.uploadId,
-      status: "processing",
-    })
-
-    try {
-      const fileUrl = upload.fileUrl
-
-      if (!fileUrl) {
-        throw new Error("Uploaded file is no longer available.")
-      }
-
-      const ocr = await extractImageText({ imageUrl: fileUrl })
-      const analysis = await analyzeArtifact({
-        artifactType: upload.artifactType,
-        preferredLanguage: upload.preferredLanguage,
-        extractedText: ocr.text,
-        imageUrl: fileUrl,
-      })
-
-      await ctx.runMutation(api.uploads.storeAnalysisResult, {
-        uploadId: args.uploadId,
-        artifactType: upload.artifactType,
-        preferredLanguage: upload.preferredLanguage,
-        ocrText: ocr.text,
-        ocrConfidence: ocr.confidence,
-        detectedItem: analysis.detectedItem,
-        safetyStatus: analysis.safetyStatus,
-        whyFlagged: analysis.whyFlagged,
-        suggestedNextAction: analysis.suggestedNextAction,
-        confidence: analysis.confidence,
-      })
-
-      return { success: true }
-    } catch (error) {
-      await ctx.runMutation(api.uploads.markUploadFailed, {
-        uploadId: args.uploadId,
-        error:
-          error instanceof Error
-            ? error.message
-            : "Bridge could not analyze this upload.",
-      })
-
-      throw error
-    }
-  },
-})
-
 export const getUploadForProcessing = query({
   args: {
     uploadId: v.id("uploads"),
@@ -158,6 +94,13 @@ export const getUploadForProcessing = query({
       artifactType: upload.artifactType,
       preferredLanguage: profile.preferredLanguage,
       fileUrl,
+      patientProfile: {
+        allergies: profile.allergies,
+        chronicConditions: profile.chronicConditions,
+        dietaryRestrictions: profile.dietaryRestrictions,
+        religiousRestrictions: profile.religiousRestrictions,
+        currentMedications: profile.currentMedications,
+      },
     }
   },
 })
@@ -256,6 +199,11 @@ export const storeAnalysisResult = mutation({
     whyFlagged: v.string(),
     suggestedNextAction: v.string(),
     confidence: v.number(),
+    flaggedAllergens: v.optional(v.array(v.string())),
+    flaggedIngredients: v.optional(v.array(v.string())),
+    matchedProfileRules: v.optional(v.array(v.string())),
+    aiModel: v.optional(v.string()),
+    rawSummary: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { profile } = await requireCurrentProfile(ctx)
@@ -271,37 +219,38 @@ export const storeAnalysisResult = mutation({
       .withIndex("uploadId", (q) => q.eq("uploadId", upload._id))
       .unique()
 
+    const analysisData = {
+      artifactType: args.artifactType,
+      preferredLanguage: args.preferredLanguage,
+      detectedItem: args.detectedItem,
+      safetyStatus: args.safetyStatus,
+      whyFlagged: args.whyFlagged,
+      suggestedNextAction: args.suggestedNextAction,
+      confidence: args.confidence,
+      flaggedAllergens: args.flaggedAllergens,
+      flaggedIngredients: args.flaggedIngredients,
+      matchedProfileRules: args.matchedProfileRules,
+      aiModel: args.aiModel,
+      rawSummary: args.rawSummary,
+      updatedAt: now,
+    }
+
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        artifactType: args.artifactType,
-        preferredLanguage: args.preferredLanguage,
-        detectedItem: args.detectedItem,
-        safetyStatus: args.safetyStatus,
-        whyFlagged: args.whyFlagged,
-        suggestedNextAction: args.suggestedNextAction,
-        confidence: args.confidence,
-        updatedAt: now,
-      })
+      await ctx.db.patch(existing._id, analysisData)
     } else {
       await ctx.db.insert("analysisResults", {
         profileId: upload.profileId,
         uploadId: upload._id,
-        artifactType: args.artifactType,
-        preferredLanguage: args.preferredLanguage,
-        detectedItem: args.detectedItem,
-        safetyStatus: args.safetyStatus,
-        whyFlagged: args.whyFlagged,
-        suggestedNextAction: args.suggestedNextAction,
-        confidence: args.confidence,
+        ...analysisData,
         createdAt: now,
-        updatedAt: now,
       })
     }
 
     await ctx.db.patch(upload._id, {
       status: "processed",
-      ocrText: args.ocrText,
-      ocrConfidence: args.ocrConfidence,
+      ocrText: args.ocrText || undefined,
+      ocrConfidence:
+        args.ocrConfidence != null ? args.ocrConfidence : undefined,
       processingError: undefined,
       updatedAt: now,
     })

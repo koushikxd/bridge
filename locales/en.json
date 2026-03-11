@@ -203,5 +203,19 @@
   "scan.status.uploaded": "Uploaded",
   "scan.status.processing": "Processing",
   "scan.status.processed": "Processed",
-  "scan.status.failed": "Failed"
+  "scan.status.failed": "Failed",
+  "scan.ingredients": "Ingredients",
+  "scan.allergens": "Allergens",
+  "scan.nutrition": "Nutrition highlights",
+  "scan.medicines": "Medicines",
+  "scan.dosage": "Dosage",
+  "scan.purpose": "Purpose",
+  "scan.instructions": "Instructions",
+  "scan.flaggedAllergens": "Flagged allergens",
+  "scan.flaggedIngredients": "Flagged ingredients",
+  "scan.profileMatches": "Profile matches",
+  "scan.retryButton": "Retry scan",
+  "scan.retrying": "Re-analyzing...",
+  "scan.scanMore": "Scan more",
+  "scan.processingHint": "This usually takes a few seconds. Keep this screen open while Bridge finishes the analysis."
 }
