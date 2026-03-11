@@ -148,6 +148,7 @@
   "home.recentScansBody": "Revisit the latest prescription, label, meal, and menu checks.",
   "home.noScans": "No scans yet. Use the scanner to understand a prescription, medicine label, meal, food label, or menu.",
   "home.view": "View",
+  "home.deleteScan": "Delete",
   "home.signOut": "Sign out",
   "home.signingOut": "Signing out...",
   "home.actionTaken": "Taken",

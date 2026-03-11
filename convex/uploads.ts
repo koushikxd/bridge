@@ -208,6 +208,37 @@ export const markUploadFailed = mutation({
   },
 })
 
+export const deleteUpload = mutation({
+  args: {
+    uploadId: v.id("uploads"),
+  },
+  handler: async (ctx, args) => {
+    const { profile } = await requireCurrentProfile(ctx)
+    const upload = await ctx.db.get(args.uploadId)
+
+    if (!upload || upload.profileId !== profile._id) {
+      throw new Error("Upload not found.")
+    }
+
+    // Delete associated analysis result if it exists
+    const analysis = await ctx.db
+      .query("analysisResults")
+      .withIndex("uploadId", (q) => q.eq("uploadId", upload._id))
+      .unique()
+
+    if (analysis) {
+      await ctx.db.delete(analysis._id)
+    }
+
+    // Delete the storage file
+    if (upload.storageId) {
+      await ctx.storage.delete(upload.storageId)
+    }
+
+    await ctx.db.delete(upload._id)
+  },
+})
+
 export const storeAnalysisResult = mutation({
   args: {
     uploadId: v.id("uploads"),

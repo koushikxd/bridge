@@ -11,6 +11,7 @@ import { redirect } from "next/navigation"
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
 import { DoseActions } from "@/components/home/dose-actions"
+import { RecentScanItem } from "@/components/home/recent-scan-item"
 import { ScanUploadDialog } from "@/components/upload/scan-upload-dialog"
 import { api } from "@/convex/_generated/api"
 import { requireCompletedOnboarding } from "@/lib/auth-guards"
@@ -422,27 +423,15 @@ export default async function Page() {
                   />
                 ) : (
                   homeData.recentAnalyses.map((entry) => (
-                    <Link
+                    <RecentScanItem
                       key={entry.upload._id}
-                      href={`/scan/${entry.upload._id}`}
-                      className="rounded-[1.35rem] border border-border/80 bg-background/78 px-4 py-4 transition hover:border-primary/30 hover:bg-background"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-foreground sm:text-base">
-                            {entry.analysis?.detectedItem ??
-                              entry.upload.fileName}
-                          </p>
-                          <p className="mt-1 text-sm text-muted-foreground capitalize">
-                            {entry.analysis?.safetyStatus ??
-                              entry.upload.status}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-muted px-2.5 py-1 text-[0.68rem] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                          {viewLabel}
-                        </span>
-                      </div>
-                    </Link>
+                      uploadId={entry.upload._id}
+                      detectedItem={entry.analysis?.detectedItem}
+                      safetyStatus={entry.analysis?.safetyStatus}
+                      fileName={entry.upload.fileName}
+                      uploadStatus={entry.upload.status}
+                      viewLabel={viewLabel}
+                    />
                   ))
                 )}
               </div>
