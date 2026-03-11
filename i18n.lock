@@ -62,6 +62,62 @@ checksums:
     settings.medicines.addTime: a885b48f9a0d5e7a2575a6b84d9045ae
     settings.medicines.save: e3b2b5cfc230ebc98ba2f49f2ee69e32
     settings.medicines.saved: a20809fed1d27a52a1300e4b9f4d4571
+    settings.reminders.eyebrow: 9204774ce193285f78feee73cb20a4a7
+    settings.reminders.title: 31a6115c6b60510c2e38ea328e22be3c
+    settings.reminders.body: c89f7149f541c51b12733d57a7dcc41a
+    settings.reminders.toggleTitle: 8629e5c08473f65d5e5a1bd8ce97a577
+    settings.reminders.toggleBody: 5808b4f4eb03da487024a374cacd3403
+    settings.reminders.detectedTimezone: ad3b76d12b624313e172adb54174f97f
+    settings.reminders.savedTimezone: 2fe512c65f1ba705195c3e926c4ec43f
+    settings.reminders.save: 1c35fc27bbb810d200313158774e0280
+    settings.reminders.saved: 45b4d4681aeb152fc1f261970ab71d38
+    settings.reminders.helper: 0183f6a56950df028a87418b98481196
+    settings.quick.backBody: 8c90ee0a5b95a93012971041c5acdade
+    settings.quick.scanTitle: 18743f0d1b80c16cd60d59e3f2cb4970
+    settings.quick.scanBody: 0c9d8b274748d22136a86a15abdf4e8c
+    settings.profile.age: 7b19e5ac4e0cabb832440c67c5ab6abe
+    settings.profile.allergies: ca16072507c2cb3d543759d297ec138f
+    settings.profile.conditions: e60cad76f990fc7d1fb69c17eba13e22
+    settings.profile.restrictions: 62764a58b993d7a582ac5f83672ad614
+    settings.profile.language: f317df4550fbde6f6c5ca2288364692f
+    settings.profile.dietaryRestrictions: 6fb7b408ee0436b5eaa1ec8d7e4d23de
+    settings.profile.religiousRestrictions: 3aa5917963573816efd18acdad4ab770
+    settings.profile.notes: d9a10a7e34d454b1eebf721c37252676
+    settings.profile.notesPlaceholder: bbf17d7c8bb852246e6628747a7a191f
+    settings.profile.allergiesPlaceholder: eb60893f026d7e28bf61560596ae0024
+    settings.profile.conditionsPlaceholder: ebe4f382893faa89a93b4e3ef89a7775
+    settings.profile.dietaryPlaceholder: 1049cc15a7fb06d0436bda22ea613453
+    settings.profile.religiousPlaceholder: aeb9e18fc4cf60aa4f960ac2bfeb78af
+    settings.profile.saveError: 6723204f53d3562916c1106733e9f543
+    settings.medicines.tracked: 7e8e837508134337a204f1f8874ffcc0
+    settings.medicines.active: 3e1ec025c4a50830bbb9ad57a176630a
+    settings.medicines.dailyDoses: 6b110f1eb5d4fa73a3bba7df6d5f4ee7
+    settings.medicines.activeHome: 878877ca5d41ab861ec6e40b390048d8
+    settings.medicines.pausedHome: 8ef7fa58d40d13d34c4194d397e5ea85
+    settings.medicines.remove: dba2fe5fe9f83f8078c687f28cba4b52
+    settings.medicines.name: d033a219272b40f1dbb11071ad030093
+    settings.medicines.instructions: 047b6298686bcec6b2161f5045893002
+    settings.medicines.times: da69ae675956667452ed6a39360fcde8
+    settings.medicines.activeToggle: 6828eb70b61133a061adfeeb2adc67af
+    settings.medicines.duration: de282f6d5af19e40878833e40ef8036b
+    settings.medicines.saveError: 2adaead1aed7d7768cb0042e22f74d1f
+    settings.medicines.saving: 0d65c235d1d8117cd66df4cdc18df9d2
+    settings.reminders.toggleLabel: 1037ce2c6042c2967c30458d1a4e7bed
+    settings.reminders.permissionTitle: 08e654e8500188b97a57326bce184dd5
+    settings.reminders.permissionReady: da4d0211c3664b482821880498010d86
+    settings.reminders.permissionPrompt: edce1eed9d2c6b175ba0e9695fc1fe0b
+    settings.reminders.permissionDenied: c596e44266bbd7ab716eeb4bf7d4e3ae
+    settings.reminders.permissionUnsupported: 2a7fcd1def761216706078de339ece6b
+    settings.reminders.enableAction: 2c951949ad1ed206475dfa7f4ec3d0d3
+    assistant.trigger: 2217e45e9798f6e30d007c5ed5736b91
+    assistant.eyebrow: ee1d0bfbdcc34d17996294d7eb196075
+    assistant.title: 7ae36d95f3cd2a8a8008fa2dc946d104
+    assistant.body: 1e6c655e7eaaadf6dc696909641bbb85
+    assistant.placeholder: 42a10253cee9add2a232eb22a165e1d3
+    assistant.send: 76a8497d7b546628b03bb81d5c1ce995
+    assistant.loading: e199374dd463b95a296655f7c57f2d9a
+    assistant.error: d459e79d93e2f0b01a990d4e7654e23e
+    assistant.empty: 040c38694f6ab2850add9dbd3290b7e7
     home.eyebrow: db5a52c5182fa5cb31c5dc475ed1b46b
     home.title: 3eac148c950f259bf96e33000c816e20
     home.body: 8ee9e6b5f71279802649e46c51aafd91
@@ -117,6 +173,18 @@ checksums:
     home.scanUploading: 2c86fea03bac3e7652b9ad1fa450c60b
     home.scanDropActive: 5e06bced0570fd558f7dbff9c2a972d6
     home.scanFailed: 572c909ae416cdeb23173dd883d5d6d0
+    reminders.banner.eyebrow: a6da6f1ff0e8eb35a53100a2c824a220
+    reminders.banner.enable: 2c951949ad1ed206475dfa7f4ec3d0d3
+    reminders.banner.readyTitle: 148ccbf2afec3866bb1b2e3a8b4da5c2
+    reminders.banner.readyBody: 5421614357feb06e4f61eb46e2d657ef
+    reminders.banner.deniedTitle: 18a9c7d3769659c7d2f88951f8950f03
+    reminders.banner.deniedBody: 97bf7df235adcb72058bd24142e3303c
+    reminders.banner.unsupportedTitle: a76095148f51d64f2830c239fbaf91bf
+    reminders.banner.unsupportedBody: 5d78406d381e041afb18b8ce51dc115b
+    reminders.banner.defaultTitle: 0369d108a84fe4184b9b3aaa1fede515
+    reminders.banner.defaultBody: 086478861ae1085a810f6c03a0211b32
+    reminders.notification.titlePrefix: 8b142befca06415b2d8cb54a2bbb4469
+    reminders.notification.doseDue: 2de19bd157cb63514b112096ee98d774
     scan.image: 3d12e031d9840fff4f7db6abc73bc6d7
     scan.result: c08df923fb1753b5e6df453e28ed991d
     scan.processing: 3c8e6625804a2322748d45b652953f6d

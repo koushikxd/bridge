@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 import "./globals.css"
+import { BridgeAssistant } from "@/components/assistant/bridge-assistant"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
@@ -43,6 +44,7 @@ export default function RootLayout({
           <ThemeProvider>
             <ThemeToggle />
             <LocalReminderManager />
+            <BridgeAssistant />
             {children}
           </ThemeProvider>
         </ConvexClientProvider>

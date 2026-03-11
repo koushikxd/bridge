@@ -9,6 +9,7 @@ const LOOKAHEAD_WINDOW_MS = 60 * 60 * 1000
 const CHECK_INTERVAL_MS = 30 * 1000
 
 type ReminderHomeData = {
+  locale: string
   reminderPreferences: {
     enabled: boolean
     timezone: string
@@ -30,6 +31,9 @@ type ReminderHomeData = {
 
 export function LocalReminderManager() {
   const [homeData, setHomeData] = useState<ReminderHomeData | null>(null)
+  const [permission, setPermission] = useState<NotificationPermission | null>(
+    typeof Notification === "undefined" ? null : Notification.permission
+  )
   const firedEventIdsRef = useRef<Set<string>>(new Set())
   const browserTimeZone = useMemo(() => getBrowserTimeZone(), [])
 
@@ -65,10 +69,36 @@ export function LocalReminderManager() {
 
   useEffect(() => {
     if (
+      !homeData?.reminderPreferences.enabled ||
+      !("Notification" in window) ||
+      Notification.permission !== "default"
+    ) {
+      return
+    }
+
+    let cancelled = false
+
+    async function requestPermission() {
+      const nextPermission = await Notification.requestPermission()
+
+      if (!cancelled) {
+        setPermission(nextPermission)
+      }
+    }
+
+    void requestPermission()
+
+    return () => {
+      cancelled = true
+    }
+  }, [homeData?.reminderPreferences.enabled])
+
+  useEffect(() => {
+    if (
       !homeData ||
       !homeData.reminderPreferences.enabled ||
       !("Notification" in window) ||
-      Notification.permission !== "granted" ||
+      permission !== "granted" ||
       !("serviceWorker" in navigator)
     ) {
       return
@@ -124,7 +154,7 @@ export function LocalReminderManager() {
     return () => {
       cancelled = true
     }
-  }, [browserTimeZone, homeData])
+  }, [browserTimeZone, homeData, permission])
 
   return null
 }

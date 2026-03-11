@@ -10,6 +10,7 @@ export async function GET() {
   const homeData = await fetchAuthQuery(api.medications.getHomeData, {})
 
   return NextResponse.json({
+    locale: homeData.profile.preferredLanguage,
     reminderPreferences: homeData.reminderPreferences,
     todayDoses: homeData.todayDoses,
   })

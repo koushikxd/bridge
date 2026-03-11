@@ -2,6 +2,7 @@ import { createWorker, type WorkerOptions } from "tesseract.js"
 
 export type OcrImageInput = {
   imageUrl: string
+  languages?: string[]
   options?: Partial<WorkerOptions>
 }
 
@@ -18,9 +19,12 @@ export async function extractImageText(
   input: OcrImageInput
 ): Promise<OcrResult> {
   void input.options
+  const languages = input.languages?.length
+    ? input.languages
+    : ["eng", "spa", "fra", "deu", "ita", "por", "jpn", "chi_sim"]
 
   try {
-    const worker = await createWorker("eng")
+    const worker = await createWorker(languages)
     const result = await worker.recognize(input.imageUrl)
     await worker.terminate()
 

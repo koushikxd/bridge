@@ -7,7 +7,6 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { api } from "@/convex/_generated/api"
-import { copy } from "@/lib/copy"
 import {
   reminderPreferencesSchema,
   type ReminderPreferencesInput,
@@ -16,8 +15,29 @@ import { getBrowserTimeZone } from "@/lib/time"
 
 export function ReminderPreferencesCard({
   reminderPreferences,
+  uiText,
 }: {
   reminderPreferences: ReminderPreferencesInput
+  uiText: {
+    eyebrow: string
+    title: string
+    body: string
+    toggleTitle: string
+    toggleBody: string
+    toggleLabel: string
+    detectedTimezone: string
+    savedTimezone: string
+    saved: string
+    helper: string
+    save: string
+    saving: string
+    permissionTitle: string
+    permissionReady: string
+    permissionPrompt: string
+    permissionDenied: string
+    permissionUnsupported: string
+    enableAction: string
+  }
 }) {
   const router = useRouter()
   const updateReminderPreferences = useMutation(
@@ -27,8 +47,21 @@ export function ReminderPreferencesCard({
   const [isPending, setIsPending] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [permission, setPermission] = useState<NotificationPermission | null>(
+    typeof Notification === "undefined" ? null : Notification.permission
+  )
 
   const currentTimeZone = useMemo(() => getBrowserTimeZone(), [])
+
+  async function requestPermission() {
+    if (typeof Notification === "undefined") {
+      setPermission(null)
+      return
+    }
+
+    const nextPermission = await Notification.requestPermission()
+    setPermission(nextPermission)
+  }
 
   async function handleSave() {
     setSaved(false)
@@ -60,41 +93,66 @@ export function ReminderPreferencesCard({
       <div className="flex flex-col gap-5">
         <div>
           <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
-            {copy("settings.reminders.eyebrow")}
+            {uiText.eyebrow}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-            {copy("settings.reminders.title")}
+            {uiText.title}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {copy("settings.reminders.body")}
+            {uiText.body}
           </p>
+        </div>
+
+        <div className="rounded-[1.5rem] border border-border bg-background/70 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                {uiText.permissionTitle}
+              </p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                {typeof Notification === "undefined"
+                  ? uiText.permissionUnsupported
+                  : permission === "granted"
+                    ? uiText.permissionReady
+                    : permission === "denied"
+                      ? uiText.permissionDenied
+                      : uiText.permissionPrompt}
+              </p>
+            </div>
+            {typeof Notification !== "undefined" && permission === "default" ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={requestPermission}
+              >
+                {uiText.enableAction}
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <div className="rounded-[1.5rem] border border-border bg-background/70 p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-foreground">
-                {copy("settings.reminders.toggleTitle")}
+                {uiText.toggleTitle}
               </p>
               <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                {copy("settings.reminders.toggleBody")}
+                {uiText.toggleBody}
               </p>
             </div>
             <Switch
               checked={enabled}
               onCheckedChange={setEnabled}
-              aria-label="Toggle medicine reminders"
+              aria-label={uiText.toggleLabel}
             />
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
+          <InfoCard label={uiText.detectedTimezone} value={currentTimeZone} />
           <InfoCard
-            label={copy("settings.reminders.detectedTimezone")}
-            value={currentTimeZone}
-          />
-          <InfoCard
-            label={copy("settings.reminders.savedTimezone")}
+            label={uiText.savedTimezone}
             value={reminderPreferences.timezone}
           />
         </div>
@@ -102,11 +160,11 @@ export function ReminderPreferencesCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-h-5 text-sm text-muted-foreground">
             {saved ? (
-              copy("settings.reminders.saved")
+              uiText.saved
             ) : error ? (
               <span className="text-destructive">{error}</span>
             ) : (
-              copy("settings.reminders.helper")
+              uiText.helper
             )}
           </div>
           <Button
@@ -115,9 +173,7 @@ export function ReminderPreferencesCard({
             onClick={handleSave}
             disabled={isPending}
           >
-            {isPending
-              ? copy("onboarding.saving")
-              : copy("settings.reminders.save")}
+            {isPending ? uiText.saving : uiText.save}
           </Button>
         </div>
       </div>

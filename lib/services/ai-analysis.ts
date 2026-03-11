@@ -1,6 +1,7 @@
 import { google } from "@ai-sdk/google"
-import { generateObject } from "ai"
+import { generateObject, generateText } from "ai"
 
+import { createLanguageRule } from "@/lib/assistant"
 import {
   artifactAnalysisRequestSchema,
   structuredAnalysisResultSchema,
@@ -8,6 +9,7 @@ import {
   type StructuredAnalysisResult,
 } from "@/lib/contracts/analysis"
 import { preferredLanguageLabels } from "@/lib/contracts/profile"
+import { localizePatientMessages } from "@/lib/services/localization"
 
 export const bridgeAnalysisModel = google("gemini-2.5-flash")
 
@@ -48,28 +50,99 @@ function buildFallbackAnalysis(
   }
 }
 
+async function localizeFallbackAnalysis(
+  result: StructuredAnalysisResult,
+  preferredLanguage: ArtifactAnalysisRequest["preferredLanguage"]
+) {
+  if (preferredLanguage === "en") {
+    return result
+  }
+
+  const [detectedItem, whyFlagged, suggestedNextAction] =
+    await localizePatientMessages(
+      [result.detectedItem, result.whyFlagged, result.suggestedNextAction],
+      preferredLanguage
+    )
+
+  return {
+    ...result,
+    detectedItem,
+    whyFlagged,
+    suggestedNextAction,
+  }
+}
+
+async function summarizeImageLanguage(args: {
+  imageUrl?: string
+  extractedText?: string
+  preferredLanguage: ArtifactAnalysisRequest["preferredLanguage"]
+}) {
+  if (!args.imageUrl || !isAiAnalysisConfigured()) {
+    return null
+  }
+
+  try {
+    const { text } = await generateText({
+      model: bridgeAnalysisModel,
+      maxOutputTokens: 120,
+      system:
+        "Identify the most likely source language of the uploaded text and briefly summarize what kind of health-related item it is. Keep the response short.",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Inspect this upload. OCR text (may be noisy): ${args.extractedText || "none"}. ${createLanguageRule(args.preferredLanguage)}`,
+            },
+            {
+              type: "image",
+              image: args.imageUrl,
+            },
+          ],
+        },
+      ],
+    })
+
+    return text.trim()
+  } catch {
+    return null
+  }
+}
+
 export async function analyzeArtifact(
   input: ArtifactAnalysisRequest
 ): Promise<StructuredAnalysisResult> {
   artifactAnalysisRequestSchema.parse(input)
 
   if (!isAiAnalysisConfigured()) {
-    return buildFallbackAnalysis(input)
+    return await localizeFallbackAnalysis(
+      buildFallbackAnalysis(input),
+      input.preferredLanguage
+    )
   }
 
   try {
+    const inferredContext = await summarizeImageLanguage({
+      imageUrl: input.imageUrl,
+      extractedText: input.extractedText,
+      preferredLanguage: input.preferredLanguage,
+    })
+
     const result = await generateObject({
       model: bridgeAnalysisModel,
       schema: structuredAnalysisResultSchema,
-      system:
-        "You are Bridge, a multilingual health companion. Return short, patient-friendly structured results. Mention uncertainty when text is unclear. Avoid long paragraphs and keep every field concise.",
-      prompt: `Analyze this ${input.artifactType.replaceAll("_", " ")} for a patient-facing health assistant. Return a short structured safety result. Keep wording practical, concise, and never act as a replacement for medical advice.${
+      system: `You are Bridge, a multilingual health companion. Return short, patient-friendly structured results. Mention uncertainty when text is unclear. Avoid long paragraphs and keep every field concise. ${createLanguageRule(input.preferredLanguage)}`,
+      prompt: `Analyze this uploaded health-related image for a patient-facing health assistant. Infer whether it is a prescription, medicine label, food label, meal, menu, or a general document. If the original text is in another language, translate and explain it in ${preferredLanguageLabels[input.preferredLanguage]}. Return a short structured safety result. Keep wording practical, concise, and never act as a replacement for medical advice.${
         input.imageUrl ? `\n\nImage URL: ${input.imageUrl}` : ""
-      }${input.extractedText ? `\n\nOCR text:\n${input.extractedText}` : ""}\n\nWrite the response in ${preferredLanguageLabels[input.preferredLanguage]}. Use that language for detected item, why flagged, and suggested next action.`,
+      }${input.extractedText ? `\n\nOCR text:\n${input.extractedText}` : ""}${inferredContext ? `\n\nInferred context:\n${inferredContext}` : ""}\n\nWrite the response in ${preferredLanguageLabels[input.preferredLanguage]}. Use that language for detected item, why flagged, and suggested next action.`,
     })
 
     return result.object
   } catch {
-    return buildFallbackAnalysis(input)
+    return await localizeFallbackAnalysis(
+      buildFallbackAnalysis(input),
+      input.preferredLanguage
+    )
   }
 }

@@ -30,7 +30,35 @@ type SettingsProfile = {
   emergencyNotes?: string
 }
 
-export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
+export function ProfileSettingsForm({
+  profile,
+  uiText,
+}: {
+  profile: SettingsProfile
+  uiText: {
+    eyebrow: string
+    title: string
+    body: string
+    save: string
+    saving: string
+    saved: string
+    helper: string
+    language: string
+    age: string
+    allergies: string
+    conditions: string
+    restrictions: string
+    dietaryRestrictions: string
+    religiousRestrictions: string
+    notes: string
+    notesPlaceholder: string
+    allergiesPlaceholder: string
+    conditionsPlaceholder: string
+    dietaryPlaceholder: string
+    religiousPlaceholder: string
+    saveError: string
+  }
+}) {
   const router = useRouter()
   const updateProfileSettings = useMutation(api.profiles.updateProfileSettings)
   const [form, setForm] = useState(() => ({
@@ -71,9 +99,7 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
       router.refresh()
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not save profile settings."
+        caughtError instanceof Error ? caughtError.message : uiText.saveError
       )
     } finally {
       setIsPending(false)
@@ -85,25 +111,27 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
       <div className="flex flex-col gap-6">
         <div>
           <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
-            Profile info
+            {uiText.eyebrow}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-            Review what Bridge knows about you
+            {uiText.title}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Update the health details collected during onboarding so future
-            analysis stays relevant.
+            {uiText.body}
           </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard label="Allergies" value={normalized.allergies.length} />
           <StatCard
-            label="Conditions"
+            label={uiText.allergies}
+            value={normalized.allergies.length}
+          />
+          <StatCard
+            label={uiText.conditions}
             value={normalized.chronicConditions.length}
           />
           <StatCard
-            label="Restrictions"
+            label={uiText.restrictions}
             value={
               normalized.dietaryRestrictions.length +
               normalized.religiousRestrictions.length
@@ -113,7 +141,7 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
 
         <div className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm text-foreground">
-            <span>Preferred language</span>
+            <span>{uiText.language}</span>
             <select
               value={form.preferredLanguage}
               onChange={(event) =>
@@ -133,7 +161,7 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
           </label>
 
           <label className="flex flex-col gap-2 text-sm text-foreground">
-            <span>Age</span>
+            <span>{uiText.age}</span>
             <input
               type="number"
               min={1}
@@ -149,31 +177,31 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
 
         <div className="grid gap-4 md:grid-cols-2">
           <SettingsInput
-            label="Allergies"
+            label={uiText.allergies}
             value={form.allergies}
             onChange={(value) =>
               setForm((current) => ({ ...current, allergies: value }))
             }
-            placeholder="Peanuts, penicillin"
+            placeholder={uiText.allergiesPlaceholder}
           />
           <SettingsInput
-            label="Chronic conditions"
+            label={uiText.conditions}
             value={form.chronicConditions}
             onChange={(value) =>
               setForm((current) => ({ ...current, chronicConditions: value }))
             }
-            placeholder="Diabetes, asthma"
+            placeholder={uiText.conditionsPlaceholder}
           />
           <SettingsInput
-            label="Dietary restrictions"
+            label={uiText.dietaryRestrictions}
             value={form.dietaryRestrictions}
             onChange={(value) =>
               setForm((current) => ({ ...current, dietaryRestrictions: value }))
             }
-            placeholder="Vegetarian, low sodium"
+            placeholder={uiText.dietaryPlaceholder}
           />
           <SettingsInput
-            label="Religious restrictions"
+            label={uiText.religiousRestrictions}
             value={form.religiousRestrictions}
             onChange={(value) =>
               setForm((current) => ({
@@ -181,12 +209,12 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
                 religiousRestrictions: value,
               }))
             }
-            placeholder="Halal, fasting"
+            placeholder={uiText.religiousPlaceholder}
           />
         </div>
 
         <label className="flex flex-col gap-2 text-sm text-foreground">
-          <span>Emergency notes</span>
+          <span>{uiText.notes}</span>
           <textarea
             value={form.emergencyNotes}
             onChange={(event) =>
@@ -196,18 +224,18 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
               }))
             }
             className="min-h-28 rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-            placeholder="Any extra details Bridge should remember"
+            placeholder={uiText.notesPlaceholder}
           />
         </label>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-h-5 text-sm text-muted-foreground">
             {saved ? (
-              "Profile saved."
+              uiText.saved
             ) : error ? (
               <span className="text-destructive">{error}</span>
             ) : (
-              "Use commas to separate multiple items."
+              uiText.helper
             )}
           </div>
           <Button
@@ -216,7 +244,7 @@ export function ProfileSettingsForm({ profile }: { profile: SettingsProfile }) {
             onClick={handleSubmit}
             disabled={isPending}
           >
-            {isPending ? "Saving..." : "Save profile"}
+            {isPending ? uiText.saving : uiText.save}
           </Button>
         </div>
       </div>

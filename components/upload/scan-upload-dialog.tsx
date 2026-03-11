@@ -96,9 +96,9 @@ export function ScanUploadDialog({
         storageId: storageId as never,
       })
 
-      await processUpload({ uploadId })
       setOpen(false)
       router.push(`/scan/${uploadId}`)
+      void processUpload({ uploadId })
     } catch (error) {
       setStatus(error instanceof Error ? error.message : failedLabel)
       setIsPending(false)

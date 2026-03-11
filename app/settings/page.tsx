@@ -8,6 +8,12 @@ import { requireCompletedOnboarding } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
 import { localizedCopy } from "@/lib/copy"
 
+type ProfileSettingsText = Parameters<typeof ProfileSettingsForm>[0]["uiText"]
+type MedicineSettingsText = Parameters<typeof MedicineSettingsForm>[0]["uiText"]
+type ReminderSettingsText = Parameters<
+  typeof ReminderPreferencesCard
+>[0]["uiText"]
+
 export const metadata = {
   title: "Settings | Bridge",
   description: "Edit your Bridge profile and tracked medicines.",
@@ -16,19 +22,215 @@ export const metadata = {
 export default async function SettingsPage() {
   const { profile } = await requireCompletedOnboarding()
   const locale = profile?.preferredLanguage ?? "en"
+  const settingsData = await fetchAuthQuery(api.medications.getSettingsData, {})
+
   const [
     settingsEyebrow,
     settingsTitle,
     settingsBody,
     settingsBackHome,
-    settingsData,
+    settingsQuickBackBody,
+    settingsQuickScanTitle,
+    settingsQuickScanBody,
+    profileEyebrow,
+    profileTitle,
+    profileBody,
+    profileSave,
+    profileSaved,
+    profileHelper,
+    profileLanguage,
+    profileAge,
+    profileAllergies,
+    profileConditions,
+    profileRestrictions,
+    profileDietaryRestrictions,
+    profileReligiousRestrictions,
+    profileNotes,
+    profileNotesPlaceholder,
+    profileAllergiesPlaceholder,
+    profileConditionsPlaceholder,
+    profileDietaryPlaceholder,
+    profileReligiousPlaceholder,
+    profileSaveError,
+    medicinesEyebrow,
+    medicinesTitle,
+    medicinesBody,
+    medicinesAdd,
+    medicinesAddTime,
+    medicinesSave,
+    medicinesSaved,
+    medicinesTracked,
+    medicinesActive,
+    medicinesDailyDoses,
+    medicinesActiveHome,
+    medicinesPausedHome,
+    medicinesRemove,
+    medicinesName,
+    medicinesDosage,
+    medicinesPurpose,
+    medicinesInstructions,
+    medicinesTimes,
+    medicinesActiveToggle,
+    medicinesDuration,
+    medicinesSaveError,
+    medicinesSaving,
+    remindersEyebrow,
+    remindersTitle,
+    remindersBody,
+    remindersToggleTitle,
+    remindersToggleBody,
+    remindersToggleLabel,
+    remindersDetectedTimezone,
+    remindersSavedTimezone,
+    remindersSave,
+    remindersSaved,
+    remindersHelper,
+    remindersPermissionTitle,
+    remindersPermissionReady,
+    remindersPermissionPrompt,
+    remindersPermissionDenied,
+    remindersPermissionUnsupported,
+    remindersEnableAction,
+    onboardingSaving,
   ] = await Promise.all([
     localizedCopy("settings.eyebrow", locale),
     localizedCopy("settings.title", locale),
     localizedCopy("settings.body", locale),
     localizedCopy("settings.backHome", locale),
-    fetchAuthQuery(api.medications.getSettingsData, {}),
+    localizedCopy("settings.quick.backBody", locale),
+    localizedCopy("settings.quick.scanTitle", locale),
+    localizedCopy("settings.quick.scanBody", locale),
+    localizedCopy("settings.profile.eyebrow", locale),
+    localizedCopy("settings.profile.title", locale),
+    localizedCopy("settings.profile.body", locale),
+    localizedCopy("settings.profile.save", locale),
+    localizedCopy("settings.profile.saved", locale),
+    localizedCopy("settings.profile.helper", locale),
+    localizedCopy("settings.profile.language", locale),
+    localizedCopy("settings.profile.age", locale),
+    localizedCopy("settings.profile.allergies", locale),
+    localizedCopy("settings.profile.conditions", locale),
+    localizedCopy("settings.profile.restrictions", locale),
+    localizedCopy("settings.profile.dietaryRestrictions", locale),
+    localizedCopy("settings.profile.religiousRestrictions", locale),
+    localizedCopy("settings.profile.notes", locale),
+    localizedCopy("settings.profile.notesPlaceholder", locale),
+    localizedCopy("settings.profile.allergiesPlaceholder", locale),
+    localizedCopy("settings.profile.conditionsPlaceholder", locale),
+    localizedCopy("settings.profile.dietaryPlaceholder", locale),
+    localizedCopy("settings.profile.religiousPlaceholder", locale),
+    localizedCopy("settings.profile.saveError", locale),
+    localizedCopy("settings.medicines.eyebrow", locale),
+    localizedCopy("settings.medicines.title", locale),
+    localizedCopy("settings.medicines.body", locale),
+    localizedCopy("settings.medicines.add", locale),
+    localizedCopy("settings.medicines.addTime", locale),
+    localizedCopy("settings.medicines.save", locale),
+    localizedCopy("settings.medicines.saved", locale),
+    localizedCopy("settings.medicines.tracked", locale),
+    localizedCopy("settings.medicines.active", locale),
+    localizedCopy("settings.medicines.dailyDoses", locale),
+    localizedCopy("settings.medicines.activeHome", locale),
+    localizedCopy("settings.medicines.pausedHome", locale),
+    localizedCopy("settings.medicines.remove", locale),
+    localizedCopy("settings.medicines.name", locale),
+    localizedCopy("onboarding.medications.dosage", locale),
+    localizedCopy("onboarding.medications.purpose", locale),
+    localizedCopy("settings.medicines.instructions", locale),
+    localizedCopy("settings.medicines.times", locale),
+    localizedCopy("settings.medicines.activeToggle", locale),
+    localizedCopy("settings.medicines.duration", locale),
+    localizedCopy("settings.medicines.saveError", locale),
+    localizedCopy("settings.medicines.saving", locale),
+    localizedCopy("settings.reminders.eyebrow", locale),
+    localizedCopy("settings.reminders.title", locale),
+    localizedCopy("settings.reminders.body", locale),
+    localizedCopy("settings.reminders.toggleTitle", locale),
+    localizedCopy("settings.reminders.toggleBody", locale),
+    localizedCopy("settings.reminders.toggleLabel", locale),
+    localizedCopy("settings.reminders.detectedTimezone", locale),
+    localizedCopy("settings.reminders.savedTimezone", locale),
+    localizedCopy("settings.reminders.save", locale),
+    localizedCopy("settings.reminders.saved", locale),
+    localizedCopy("settings.reminders.helper", locale),
+    localizedCopy("settings.reminders.permissionTitle", locale),
+    localizedCopy("settings.reminders.permissionReady", locale),
+    localizedCopy("settings.reminders.permissionPrompt", locale),
+    localizedCopy("settings.reminders.permissionDenied", locale),
+    localizedCopy("settings.reminders.permissionUnsupported", locale),
+    localizedCopy("settings.reminders.enableAction", locale),
+    localizedCopy("onboarding.saving", locale),
   ])
+
+  const profileUiText: ProfileSettingsText = {
+    eyebrow: profileEyebrow,
+    title: profileTitle,
+    body: profileBody,
+    save: profileSave,
+    saving: onboardingSaving,
+    saved: profileSaved,
+    helper: profileHelper,
+    language: profileLanguage,
+    age: profileAge,
+    allergies: profileAllergies,
+    conditions: profileConditions,
+    restrictions: profileRestrictions,
+    dietaryRestrictions: profileDietaryRestrictions,
+    religiousRestrictions: profileReligiousRestrictions,
+    notes: profileNotes,
+    notesPlaceholder: profileNotesPlaceholder,
+    allergiesPlaceholder: profileAllergiesPlaceholder,
+    conditionsPlaceholder: profileConditionsPlaceholder,
+    dietaryPlaceholder: profileDietaryPlaceholder,
+    religiousPlaceholder: profileReligiousPlaceholder,
+    saveError: profileSaveError,
+  }
+
+  const medicineUiText: MedicineSettingsText = {
+    eyebrow: medicinesEyebrow,
+    title: medicinesTitle,
+    body: medicinesBody,
+    add: medicinesAdd,
+    addTime: medicinesAddTime,
+    save: medicinesSave,
+    saved: medicinesSaved,
+    tracked: medicinesTracked,
+    active: medicinesActive,
+    dailyDoses: medicinesDailyDoses,
+    activeHome: medicinesActiveHome,
+    pausedHome: medicinesPausedHome,
+    remove: medicinesRemove,
+    name: medicinesName,
+    dosage: medicinesDosage,
+    purpose: medicinesPurpose,
+    instructions: medicinesInstructions,
+    times: medicinesTimes,
+    activeToggle: medicinesActiveToggle,
+    duration: medicinesDuration,
+    saveError: medicinesSaveError,
+    saving: medicinesSaving,
+  }
+
+  const reminderUiText: ReminderSettingsText = {
+    eyebrow: remindersEyebrow,
+    title: remindersTitle,
+    body: remindersBody,
+    toggleTitle: remindersToggleTitle,
+    toggleBody: remindersToggleBody,
+    toggleLabel: remindersToggleLabel,
+    detectedTimezone: remindersDetectedTimezone,
+    savedTimezone: remindersSavedTimezone,
+    saved: remindersSaved,
+    helper: remindersHelper,
+    save: remindersSave,
+    saving: onboardingSaving,
+    permissionTitle: remindersPermissionTitle,
+    permissionReady: remindersPermissionReady,
+    permissionPrompt: remindersPermissionPrompt,
+    permissionDenied: remindersPermissionDenied,
+    permissionUnsupported: remindersPermissionUnsupported,
+    enableAction: remindersEnableAction,
+  }
 
   return (
     <main className="min-h-svh bg-background px-6 py-8 md:py-10">
@@ -51,27 +253,32 @@ export default async function SettingsPage() {
               <QuickLink
                 href="/"
                 title={settingsBackHome}
-                body="Return to your dashboard and today's medicine view."
+                body={settingsQuickBackBody}
               />
               <QuickLink
                 href="/scan"
-                title="Open scanner"
-                body="Analyze prescriptions, labels, meals, and menus."
+                title={settingsQuickScanTitle}
+                body={settingsQuickScanBody}
               />
             </div>
           </div>
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <ProfileSettingsForm profile={settingsData.profile} />
+          <ProfileSettingsForm
+            profile={settingsData.profile}
+            uiText={profileUiText}
+          />
           <MedicineSettingsForm
             medicines={settingsData.medicines}
             reminderPreferences={settingsData.reminderPreferences}
+            uiText={medicineUiText}
           />
         </div>
 
         <ReminderPreferencesCard
           reminderPreferences={settingsData.reminderPreferences}
+          uiText={reminderUiText}
         />
       </div>
     </main>

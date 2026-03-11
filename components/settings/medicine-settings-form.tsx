@@ -66,11 +66,36 @@ function normalizeDraft(medicine: MedicineDraft): MedicineMutationInput {
 export function MedicineSettingsForm({
   medicines,
   reminderPreferences: _reminderPreferences,
+  uiText,
 }: {
   medicines: MedicineSettingsInput[]
   reminderPreferences: {
     enabled: boolean
     timezone: string
+  }
+  uiText: {
+    eyebrow: string
+    title: string
+    body: string
+    add: string
+    addTime: string
+    save: string
+    saved: string
+    tracked: string
+    active: string
+    dailyDoses: string
+    activeHome: string
+    pausedHome: string
+    remove: string
+    name: string
+    dosage: string
+    purpose: string
+    instructions: string
+    times: string
+    activeToggle: string
+    duration: string
+    saveError: string
+    saving: string
   }
 }) {
   void _reminderPreferences
@@ -167,9 +192,7 @@ export function MedicineSettingsForm({
       router.refresh()
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Could not save medicines."
+        caughtError instanceof Error ? caughtError.message : uiText.saveError
       )
     } finally {
       setIsPending(false)
@@ -181,25 +204,24 @@ export function MedicineSettingsForm({
       <div className="flex flex-col gap-6">
         <div>
           <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
-            Medicines
+            {uiText.eyebrow}
           </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-            Edit tracked medicines and schedules
+            {uiText.title}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Adjust names, dosage notes, daily times, duration, and whether a
-            medicine stays active on your dashboard.
+            {uiText.body}
           </p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
-          <StatCard label="Tracked" value={items.length} />
+          <StatCard label={uiText.tracked} value={items.length} />
           <StatCard
-            label="Active"
+            label={uiText.active}
             value={items.filter((medicine) => medicine.isActive).length}
           />
           <StatCard
-            label="Daily doses"
+            label={uiText.dailyDoses}
             value={items.reduce(
               (sum, medicine) => sum + medicine.times.length,
               0
@@ -219,7 +241,7 @@ export function MedicineSettingsForm({
                     {medicine.name.trim() || `Medicine ${index + 1}`}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {medicine.isActive ? "Active on home" : "Paused from home"}
+                    {medicine.isActive ? uiText.activeHome : uiText.pausedHome}
                   </p>
                 </div>
                 <Button
@@ -229,12 +251,12 @@ export function MedicineSettingsForm({
                   onClick={() => removeMedicine(index)}
                 >
                   <IconTrash data-icon="inline-start" />
-                  Remove
+                  {uiText.remove}
                 </Button>
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Medicine name">
+                <Field label={uiText.name}>
                   <input
                     value={medicine.name}
                     onChange={(event) =>
@@ -244,7 +266,7 @@ export function MedicineSettingsForm({
                   />
                 </Field>
 
-                <Field label="Dosage">
+                <Field label={uiText.dosage}>
                   <input
                     value={medicine.dosage}
                     onChange={(event) =>
@@ -254,7 +276,7 @@ export function MedicineSettingsForm({
                   />
                 </Field>
 
-                <Field label="Purpose">
+                <Field label={uiText.purpose}>
                   <input
                     value={medicine.purpose}
                     onChange={(event) =>
@@ -264,7 +286,7 @@ export function MedicineSettingsForm({
                   />
                 </Field>
 
-                <Field label="Days to take">
+                <Field label={uiText.duration}>
                   <input
                     type="number"
                     min={1}
@@ -280,7 +302,7 @@ export function MedicineSettingsForm({
                 </Field>
               </div>
 
-              <Field label="Instructions" className="mt-3">
+              <Field label={uiText.instructions} className="mt-3">
                 <textarea
                   value={medicine.instructions}
                   onChange={(event) =>
@@ -299,13 +321,13 @@ export function MedicineSettingsForm({
                   }
                   className="size-4 rounded border border-input"
                 />
-                Keep this medicine active on the home dashboard
+                {uiText.activeToggle}
               </label>
 
               <div className="mt-4 flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium text-foreground">
-                    Times each day
+                    {uiText.times}
                   </p>
                   <Button
                     type="button"
@@ -314,7 +336,7 @@ export function MedicineSettingsForm({
                     onClick={() => addTime(index)}
                   >
                     <IconClockPlus data-icon="inline-start" />
-                    Add time
+                    {uiText.addTime}
                   </Button>
                 </div>
 
@@ -356,13 +378,13 @@ export function MedicineSettingsForm({
             onClick={addMedicine}
           >
             <IconPlus data-icon="inline-start" />
-            Add medicine
+            {uiText.add}
           </Button>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="min-h-5 text-sm text-muted-foreground">
               {saved ? (
-                "Medicine settings saved."
+                uiText.saved
               ) : error ? (
                 <span className="text-destructive">{error}</span>
               ) : null}
@@ -373,7 +395,7 @@ export function MedicineSettingsForm({
               onClick={handleSubmit}
               disabled={isPending}
             >
-              {isPending ? "Saving..." : "Save medicines"}
+              {isPending ? uiText.saving : uiText.save}
             </Button>
           </div>
         </div>

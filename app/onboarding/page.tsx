@@ -84,7 +84,6 @@ export default async function OnboardingPage() {
         <OnboardingFlow
           initialStep={initialStep}
           defaultLanguage={profile?.preferredLanguage ?? "en"}
-          locale={locale}
           userName={authUser.name}
           userEmail={authUser.email}
           uiText={{

@@ -52,6 +52,7 @@ export function LanguageOnboardingForm({
 
     try {
       await upsertPreferredLanguage(values)
+      router.refresh()
 
       if (onComplete) {
         onComplete()

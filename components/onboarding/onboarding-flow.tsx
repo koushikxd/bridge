@@ -12,14 +12,12 @@ type OnboardingStep = "language" | "chat" | "medications"
 export function OnboardingFlow({
   initialStep,
   defaultLanguage,
-  locale,
   userName,
   userEmail,
   uiText,
 }: {
   initialStep: OnboardingStep
   defaultLanguage: PreferredLanguage
-  locale: string
   userName: string
   userEmail: string
   uiText: {
@@ -93,7 +91,7 @@ export function OnboardingFlow({
         <OnboardingChat
           userName={userName}
           onComplete={() => setStepOverride("medications")}
-          locale={locale}
+          locale={defaultLanguage}
           uiText={{
             chatEyebrow: uiText.chatEyebrow,
             chatSubtitle: uiText.chatSubtitle,
