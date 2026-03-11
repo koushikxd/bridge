@@ -20,21 +20,11 @@ import {
   preferredLanguageLabels,
   type PreferredLanguage,
 } from "@/lib/contracts/profile"
+import { formatTimestampInTimeZone } from "@/lib/time"
 
 export const metadata = {
   title: "Home | Bridge",
   description: "Track medicines and scan health information with Bridge.",
-}
-
-function formatTime(timestamp: number) {
-  const date = new Date(timestamp)
-  let hours = date.getHours()
-  const minutes = date.getMinutes().toString().padStart(2, "0")
-  const suffix = hours >= 12 ? "PM" : "AM"
-
-  hours = hours % 12 || 12
-
-  return `${hours}:${minutes} ${suffix}`
 }
 
 export default async function Page() {
@@ -47,6 +37,7 @@ export default async function Page() {
   const preferredLanguage =
     profile.preferredLanguage as keyof typeof preferredLanguageLabels &
       PreferredLanguage
+  const reminderTimeZone = homeTimeZone(profile)
 
   const [
     homeData,
@@ -201,7 +192,10 @@ export default async function Page() {
                   label={nextDoseLabel}
                   value={
                     homeData.nextDose
-                      ? formatTime(homeData.nextDose.dueAt)
+                      ? formatTimestampInTimeZone(
+                          homeData.nextDose.dueAt,
+                          reminderTimeZone
+                        )
                       : noneLabel
                   }
                 />
@@ -340,7 +334,11 @@ export default async function Page() {
                               {dose.dosage ?? doseMissingLabel}
                             </span>
                             <span>
-                              {dueLabel} {formatTime(dose.dueAt)}
+                              {dueLabel}{" "}
+                              {formatTimestampInTimeZone(
+                                dose.dueAt,
+                                reminderTimeZone
+                              )}
                             </span>
                           </div>
 
@@ -454,6 +452,14 @@ export default async function Page() {
       </div>
     </main>
   )
+}
+
+function homeTimeZone(profile: {
+  reminderPreferences?: {
+    timezone?: string
+  }
+}) {
+  return profile.reminderPreferences?.timezone ?? "UTC"
 }
 
 function MetricCard({

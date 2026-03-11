@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { MedicineSettingsForm } from "@/components/settings/medicine-settings-form"
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form"
+import { ReminderPreferencesCard } from "@/components/reminders/reminder-preferences-card"
 import { api } from "@/convex/_generated/api"
 import { requireCompletedOnboarding } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
@@ -63,8 +64,15 @@ export default async function SettingsPage() {
 
         <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
           <ProfileSettingsForm profile={settingsData.profile} />
-          <MedicineSettingsForm medicines={settingsData.medicines} />
+          <MedicineSettingsForm
+            medicines={settingsData.medicines}
+            reminderPreferences={settingsData.reminderPreferences}
+          />
         </div>
+
+        <ReminderPreferencesCard
+          reminderPreferences={settingsData.reminderPreferences}
+        />
       </div>
     </main>
   )

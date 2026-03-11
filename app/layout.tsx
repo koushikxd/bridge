@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
+import { LocalReminderManager } from "@/components/reminders/local-reminder-manager"
 import { cn } from "@/lib/utils"
 import { Nunito_Sans } from "next/font/google"
 
@@ -41,6 +42,7 @@ export default function RootLayout({
         <ConvexClientProvider>
           <ThemeProvider>
             <ThemeToggle />
+            <LocalReminderManager />
             {children}
           </ThemeProvider>
         </ConvexClientProvider>

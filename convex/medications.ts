@@ -1,26 +1,18 @@
 import { v } from "convex/values"
+import type { GenericMutationCtx } from "convex/server"
 
 import { mutation, query } from "./_generated/server"
+import type { DataModel, Id } from "./_generated/dataModel"
 import { requireCurrentProfile } from "./profile_helpers"
-
-function startOfLocalDay(timestamp: number) {
-  const date = new Date(timestamp)
-  date.setHours(0, 0, 0, 0)
-  return date.getTime()
-}
-
-function endOfLocalDay(timestamp: number) {
-  const date = new Date(timestamp)
-  date.setHours(23, 59, 59, 999)
-  return date.getTime()
-}
-
-function buildDoseTimestamp(dayStart: number, time: string) {
-  const [hours, minutes] = time.split(":").map(Number)
-  const due = new Date(dayStart)
-  due.setHours(hours, minutes, 0, 0)
-  return due.getTime()
-}
+import {
+  addDaysInTimeZone,
+  buildDoseTimestamp,
+  formatWeekdayInTimeZone,
+  getEndOfDayInTimeZone,
+  getStartOfDayInTimeZone,
+  normalizeTimeValues,
+  normalizeTimeZone,
+} from "../lib/time"
 
 function durationDaysFromDates(startDate?: string, endDate?: string) {
   if (!startDate || !endDate) {
@@ -37,13 +29,56 @@ function durationDaysFromDates(startDate?: string, endDate?: string) {
   return Math.max(1, Math.round((end - start) / (24 * 60 * 60 * 1000)) + 1)
 }
 
-function weekdayLabel(offset: number) {
-  const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-  return labels[offset] ?? "Day"
+function getReminderTimeZone(
+  profile: {
+    reminderPreferences?: { timezone?: string }
+  },
+  schedules?: Array<{ timezone: string }>
+) {
+  return normalizeTimeZone(
+    schedules?.find((schedule) => schedule.timezone)?.timezone ??
+      profile.reminderPreferences?.timezone
+  )
+}
+
+async function replaceMedicineEventsForSchedule(
+  ctx: GenericMutationCtx<DataModel>,
+  args: {
+    profileId: Id<"profiles">
+    medicineId: Id<"medicines">
+    scheduleId: Id<"medicineSchedules">
+    durationDays: number
+    startAt: number
+    timeZone: string
+    times: string[]
+  }
+) {
+  const existingEvents = await ctx.db
+    .query("medicineEvents")
+    .withIndex("scheduleId_dueAt", (q) => q.eq("scheduleId", args.scheduleId))
+    .collect()
+
+  await Promise.all(existingEvents.map((event) => ctx.db.delete(event._id)))
+
+  for (let day = 0; day < args.durationDays; day += 1) {
+    const dayStart = addDaysInTimeZone(args.startAt, day, args.timeZone)
+
+    for (const time of args.times) {
+      await ctx.db.insert("medicineEvents", {
+        profileId: args.profileId,
+        medicineId: args.medicineId,
+        scheduleId: args.scheduleId,
+        eventType: "scheduled",
+        dueAt: buildDoseTimestamp(dayStart, time, args.timeZone),
+        createdAt: Date.now(),
+      })
+    }
+  }
 }
 
 export const saveOnboardingMedicines = mutation({
   args: {
+    timeZone: v.string(),
     medicines: v.array(
       v.object({
         name: v.string(),
@@ -58,6 +93,7 @@ export const saveOnboardingMedicines = mutation({
   handler: async (ctx, args) => {
     const { profile } = await requireCurrentProfile(ctx)
     const now = Date.now()
+    const timeZone = normalizeTimeZone(args.timeZone)
     const existingMedicines = await ctx.db
       .query("medicines")
       .withIndex("profileId", (q) => q.eq("profileId", profile._id))
@@ -81,13 +117,15 @@ export const saveOnboardingMedicines = mutation({
       existingMedicines.map((medicine) => ctx.db.delete(medicine._id))
     )
 
-    const startAt = startOfLocalDay(now)
+    const startAt = getStartOfDayInTimeZone(now, timeZone)
     const medicineNames: string[] = []
 
     for (const medicine of args.medicines) {
+      const times = normalizeTimeValues(medicine.times)
       medicineNames.push(medicine.name)
 
-      const endsAt = startAt + (medicine.durationDays - 1) * 24 * 60 * 60 * 1000
+      const endsAt =
+        addDaysInTimeZone(startAt, medicine.durationDays, timeZone) - 1
       const medicineId = await ctx.db.insert("medicines", {
         profileId: profile._id,
         name: medicine.name,
@@ -106,13 +144,11 @@ export const saveOnboardingMedicines = mutation({
         medicineId,
         label: medicine.name,
         dosageText: medicine.dosage,
-        times: medicine.times,
+        times,
         frequencyText:
-          medicine.times.length === 1
-            ? "Once daily"
-            : `${medicine.times.length} times daily`,
+          times.length === 1 ? "Once daily" : `${times.length} times daily`,
         reminderChannels: ["in_app"],
-        timezone: "UTC",
+        timezone: timeZone,
         startsAt: startAt,
         endsAt,
         status: "active",
@@ -120,23 +156,26 @@ export const saveOnboardingMedicines = mutation({
         updatedAt: now,
       })
 
-      for (let day = 0; day < medicine.durationDays; day += 1) {
-        const dayStart = startAt + day * 24 * 60 * 60 * 1000
-        for (const time of medicine.times) {
-          await ctx.db.insert("medicineEvents", {
-            profileId: profile._id,
-            medicineId,
-            scheduleId,
-            eventType: "scheduled",
-            dueAt: buildDoseTimestamp(dayStart, time),
-            createdAt: now,
-          })
-        }
-      }
+      await replaceMedicineEventsForSchedule(ctx, {
+        profileId: profile._id,
+        medicineId,
+        scheduleId,
+        durationDays: medicine.durationDays,
+        startAt,
+        timeZone,
+        times,
+      })
     }
 
     await ctx.db.patch(profile._id, {
       currentMedications: medicineNames,
+      reminderPreferences: {
+        enabled: profile.reminderPreferences?.enabled ?? true,
+        channels: profile.reminderPreferences?.channels ?? ["in_app"],
+        timezone: timeZone,
+        quietHoursStart: profile.reminderPreferences?.quietHoursStart,
+        quietHoursEnd: profile.reminderPreferences?.quietHoursEnd,
+      },
       updatedAt: now,
     })
 
@@ -169,6 +208,10 @@ export const getSettingsData = query({
 
     return {
       profile,
+      reminderPreferences: {
+        enabled: profile.reminderPreferences?.enabled ?? true,
+        timezone: getReminderTimeZone(profile),
+      },
       medicines: medicines
         .map((medicine) => {
           const medicineSchedules =
@@ -196,6 +239,7 @@ export const getSettingsData = query({
 
 export const updateMedicineSettings = mutation({
   args: {
+    timeZone: v.string(),
     medicines: v.array(
       v.object({
         medicineId: v.optional(v.id("medicines")),
@@ -212,7 +256,8 @@ export const updateMedicineSettings = mutation({
   handler: async (ctx, args) => {
     const { profile } = await requireCurrentProfile(ctx)
     const now = Date.now()
-    const startAt = startOfLocalDay(now)
+    const timeZone = normalizeTimeZone(args.timeZone)
+    const startAt = getStartOfDayInTimeZone(now, timeZone)
     const existingMedicines = await ctx.db
       .query("medicines")
       .withIndex("profileId", (q) => q.eq("profileId", profile._id))
@@ -253,14 +298,26 @@ export const updateMedicineSettings = mutation({
           status: "paused",
           updatedAt: now,
         })
+
+        await replaceMedicineEventsForSchedule(ctx, {
+          profileId: profile._id,
+          medicineId: medicine._id,
+          scheduleId: schedule._id,
+          durationDays: 0,
+          startAt,
+          timeZone,
+          times: [],
+        })
       }
     }
 
     const medicationNames: string[] = []
 
     for (const medicine of args.medicines) {
+      const times = normalizeTimeValues(medicine.times)
       medicationNames.push(medicine.name)
-      const endsAt = startAt + (medicine.durationDays - 1) * 24 * 60 * 60 * 1000
+      const endsAt =
+        addDaysInTimeZone(startAt, medicine.durationDays, timeZone) - 1
 
       if (medicine.medicineId) {
         const existingMedicine = await ctx.db.get(medicine.medicineId)
@@ -287,15 +344,24 @@ export const updateMedicineSettings = mutation({
           await ctx.db.patch(existingSchedule._id, {
             label: medicine.name,
             dosageText: medicine.dosage,
-            times: medicine.times,
+            times,
             frequencyText:
-              medicine.times.length === 1
-                ? "Once daily"
-                : `${medicine.times.length} times daily`,
+              times.length === 1 ? "Once daily" : `${times.length} times daily`,
+            timezone: timeZone,
             startsAt: startAt,
             endsAt,
             status: medicine.isActive ? "active" : "paused",
             updatedAt: now,
+          })
+
+          await replaceMedicineEventsForSchedule(ctx, {
+            profileId: profile._id,
+            medicineId: existingMedicine._id,
+            scheduleId: existingSchedule._id,
+            durationDays: medicine.durationDays,
+            startAt,
+            timeZone,
+            times,
           })
         }
 
@@ -315,28 +381,43 @@ export const updateMedicineSettings = mutation({
         updatedAt: now,
       })
 
-      await ctx.db.insert("medicineSchedules", {
+      const scheduleId = await ctx.db.insert("medicineSchedules", {
         profileId: profile._id,
         medicineId,
         label: medicine.name,
         dosageText: medicine.dosage,
-        times: medicine.times,
+        times,
         frequencyText:
-          medicine.times.length === 1
-            ? "Once daily"
-            : `${medicine.times.length} times daily`,
+          times.length === 1 ? "Once daily" : `${times.length} times daily`,
         reminderChannels: ["in_app"],
-        timezone: "UTC",
+        timezone: timeZone,
         startsAt: startAt,
         endsAt,
         status: medicine.isActive ? "active" : "paused",
         createdAt: now,
         updatedAt: now,
       })
+
+      await replaceMedicineEventsForSchedule(ctx, {
+        profileId: profile._id,
+        medicineId,
+        scheduleId,
+        durationDays: medicine.durationDays,
+        startAt,
+        timeZone,
+        times,
+      })
     }
 
     await ctx.db.patch(profile._id, {
       currentMedications: medicationNames,
+      reminderPreferences: {
+        enabled: profile.reminderPreferences?.enabled ?? true,
+        channels: profile.reminderPreferences?.channels ?? ["in_app"],
+        timezone: timeZone,
+        quietHoursStart: profile.reminderPreferences?.quietHoursStart,
+        quietHoursEnd: profile.reminderPreferences?.quietHoursEnd,
+      },
       updatedAt: now,
     })
 
@@ -349,23 +430,22 @@ export const getHomeData = query({
   handler: async (ctx) => {
     const { profile } = await requireCurrentProfile(ctx)
     const now = Date.now()
-    const dayStart = startOfLocalDay(now)
-    const dayEnd = endOfLocalDay(now)
-    const weekStart = startOfLocalDay(dayStart - 6 * 24 * 60 * 60 * 1000)
-    const medicines = await ctx.db
+    const allMedicines = await ctx.db
       .query("medicines")
-      .withIndex("profileId_isActive", (q) =>
-        q.eq("profileId", profile._id).eq("isActive", true)
-      )
+      .withIndex("profileId", (q) => q.eq("profileId", profile._id))
       .collect()
+
+    const medicines = allMedicines.filter((medicine) => medicine.isActive)
 
     const schedules = await ctx.db
       .query("medicineSchedules")
-      .withIndex("profileId_status", (q) =>
-        q.eq("profileId", profile._id).eq("status", "active")
-      )
+      .withIndex("profileId", (q) => q.eq("profileId", profile._id))
       .collect()
 
+    const timeZone = getReminderTimeZone(profile, schedules)
+    const dayStart = getStartOfDayInTimeZone(now, timeZone)
+    const dayEnd = getEndOfDayInTimeZone(now, timeZone)
+    const weekStart = addDaysInTimeZone(dayStart, -6, timeZone)
     const events = await ctx.db
       .query("medicineEvents")
       .withIndex("profileId_dueAt", (q) =>
@@ -400,7 +480,7 @@ export const getHomeData = query({
     )
 
     const medicineMap = new Map(
-      medicines.map((medicine) => [medicine._id, medicine])
+      allMedicines.map((medicine) => [medicine._id, medicine])
     )
     const scheduleMap = new Map(
       schedules.map((schedule) => [schedule._id, schedule])
@@ -418,7 +498,7 @@ export const getHomeData = query({
           dueAt: event.dueAt,
           eventType: event.eventType,
           completedAt: event.completedAt ?? null,
-          medicineName: medicine?.name ?? "Medicine",
+          medicineName: medicine?.name ?? schedule?.label ?? "Medicine",
           dosage: medicine?.dosage ?? schedule?.dosageText ?? null,
           instructions: medicine?.instructions ?? null,
         }
@@ -442,9 +522,9 @@ export const getHomeData = query({
     )
 
     const progress = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(dayStart - (6 - index) * 24 * 60 * 60 * 1000)
-      const start = startOfLocalDay(date.getTime())
-      const end = endOfLocalDay(date.getTime())
+      const reference = addDaysInTimeZone(dayStart, index - 6, timeZone)
+      const start = getStartOfDayInTimeZone(reference, timeZone)
+      const end = getEndOfDayInTimeZone(reference, timeZone)
 
       const dailyEvents = events.filter(
         (event) => event.dueAt >= start && event.dueAt <= end
@@ -455,7 +535,7 @@ export const getHomeData = query({
       ).length
 
       return {
-        label: weekdayLabel(date.getDay()),
+        label: formatWeekdayInTimeZone(reference, timeZone),
         percent:
           dailyEvents.length === 0
             ? 0
@@ -465,6 +545,10 @@ export const getHomeData = query({
 
     return {
       profile,
+      reminderPreferences: {
+        enabled: profile.reminderPreferences?.enabled ?? true,
+        timezone: timeZone,
+      },
       medicines,
       todayDoses,
       stats: {
@@ -506,5 +590,30 @@ export const logDoseEvent = mutation({
     })
 
     return await ctx.db.get(event._id)
+  },
+})
+
+export const updateReminderPreferences = mutation({
+  args: {
+    enabled: v.boolean(),
+    timezone: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { profile } = await requireCurrentProfile(ctx)
+    const now = Date.now()
+    const timezone = normalizeTimeZone(args.timezone)
+
+    await ctx.db.patch(profile._id, {
+      reminderPreferences: {
+        enabled: args.enabled,
+        channels: ["in_app"],
+        timezone,
+        quietHoursStart: profile.reminderPreferences?.quietHoursStart,
+        quietHoursEnd: profile.reminderPreferences?.quietHoursEnd,
+      },
+      updatedAt: now,
+    })
+
+    return await ctx.db.get(profile._id)
   },
 })

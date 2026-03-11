@@ -1,8 +1,15 @@
 import { z } from "zod"
 
+import { normalizeTimeValue, normalizeTimeValues } from "@/lib/time"
+
 export const timeOfDaySchema = z
   .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM format")
+  .refine((value) => normalizeTimeValue(value) !== null, "Use HH:MM format")
+
+export const browserTimeZoneSchema = z
+  .string()
+  .trim()
+  .min(1, "Timezone is required")
 
 export const onboardingMedicineSchema = z.object({
   name: z.string().trim().min(1, "Medicine name is required"),
@@ -12,7 +19,8 @@ export const onboardingMedicineSchema = z.object({
   times: z
     .array(timeOfDaySchema)
     .min(1, "Add at least one time")
-    .max(6, "Use up to 6 times per day"),
+    .max(6, "Use up to 6 times per day")
+    .transform((times) => normalizeTimeValues(times)),
   durationDays: z
     .number({ error: "Duration is required" })
     .int("Duration must be a whole number")
@@ -21,6 +29,7 @@ export const onboardingMedicineSchema = z.object({
 })
 
 export const onboardingMedicinesSchema = z.object({
+  timeZone: browserTimeZoneSchema,
   medicines: z.array(onboardingMedicineSchema),
 })
 
@@ -33,7 +42,8 @@ export const medicineSettingsSchema = z.object({
   times: z
     .array(timeOfDaySchema)
     .min(1, "Add at least one time")
-    .max(6, "Use up to 6 times per day"),
+    .max(6, "Use up to 6 times per day")
+    .transform((times) => normalizeTimeValues(times)),
   durationDays: z
     .number({ error: "Duration is required" })
     .int("Duration must be a whole number")
@@ -43,7 +53,13 @@ export const medicineSettingsSchema = z.object({
 })
 
 export const medicineSettingsListSchema = z.object({
+  timeZone: browserTimeZoneSchema,
   medicines: z.array(medicineSettingsSchema),
+})
+
+export const reminderPreferencesSchema = z.object({
+  enabled: z.boolean(),
+  timezone: browserTimeZoneSchema,
 })
 
 export const doseEventTypeSchema = z.enum(["taken", "skipped", "snoozed"])
@@ -55,3 +71,4 @@ export type MedicineSettingsListInput = z.infer<
   typeof medicineSettingsListSchema
 >
 export type DoseEventType = z.infer<typeof doseEventTypeSchema>
+export type ReminderPreferencesInput = z.infer<typeof reminderPreferencesSchema>

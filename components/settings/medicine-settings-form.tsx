@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import type { Id } from "@/convex/_generated/dataModel"
 
+import { TimeSelect } from "@/components/medications/time-select"
 import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
 import {
   medicineSettingsListSchema,
   type MedicineSettingsInput,
 } from "@/lib/contracts/medication"
+import { getBrowserTimeZone } from "@/lib/time"
 
 let nextSettingsDraftId = 0
 
@@ -63,9 +65,15 @@ function normalizeDraft(medicine: MedicineDraft): MedicineMutationInput {
 
 export function MedicineSettingsForm({
   medicines,
+  reminderPreferences: _reminderPreferences,
 }: {
   medicines: MedicineSettingsInput[]
+  reminderPreferences: {
+    enabled: boolean
+    timezone: string
+  }
 }) {
+  void _reminderPreferences
   const router = useRouter()
   const updateMedicineSettings = useMutation(
     api.medications.updateMedicineSettings
@@ -148,12 +156,13 @@ export function MedicineSettingsForm({
     setIsPending(true)
 
     try {
+      const timeZone = getBrowserTimeZone()
       const normalized = items
         .map(normalizeDraft)
         .filter((medicine) => medicine.name.length > 0)
-      medicineSettingsListSchema.parse({ medicines: normalized })
+      medicineSettingsListSchema.parse({ medicines: normalized, timeZone })
 
-      await updateMedicineSettings({ medicines: normalized })
+      await updateMedicineSettings({ medicines: normalized, timeZone })
       setSaved(true)
       router.refresh()
     } catch (caughtError) {
@@ -315,13 +324,11 @@ export function MedicineSettingsForm({
                       key={`${medicine.draftId}-${time}-${timeIndex}`}
                       className="flex items-center gap-2"
                     >
-                      <input
-                        type="time"
+                      <TimeSelect
                         value={time}
-                        onChange={(event) =>
-                          updateTime(index, timeIndex, event.target.value)
+                        onChange={(nextTime) =>
+                          updateTime(index, timeIndex, nextTime)
                         }
-                        className="rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
                       />
                       {medicine.times.length > 1 ? (
                         <Button

@@ -5,12 +5,14 @@ import { useMutation } from "convex/react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { TimeSelect } from "@/components/medications/time-select"
 import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
 import {
   onboardingMedicinesSchema,
   type OnboardingMedicineInput,
 } from "@/lib/contracts/medication"
+import { getBrowserTimeZone } from "@/lib/time"
 
 let nextMedicineDraftId = 0
 
@@ -127,8 +129,9 @@ export function MedicationOnboardingForm({
     setIsPending(true)
 
     try {
-      onboardingMedicinesSchema.parse({ medicines: nextMedicines })
-      await saveMedicines({ medicines: nextMedicines })
+      const timeZone = getBrowserTimeZone()
+      onboardingMedicinesSchema.parse({ medicines: nextMedicines, timeZone })
+      await saveMedicines({ medicines: nextMedicines, timeZone })
       await completeOnboarding({})
       router.replace("/")
       router.refresh()
@@ -290,13 +293,11 @@ export function MedicationOnboardingForm({
                       key={`${medicine.id}-${time}-${timeIndex}`}
                       className="flex items-center gap-2"
                     >
-                      <input
-                        type="time"
+                      <TimeSelect
                         value={time}
-                        onChange={(event) =>
-                          updateTime(index, timeIndex, event.target.value)
+                        onChange={(nextTime) =>
+                          updateTime(index, timeIndex, nextTime)
                         }
-                        className="rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
                       />
                       {medicine.times.length > 1 ? (
                         <Button

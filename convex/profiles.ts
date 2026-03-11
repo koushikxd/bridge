@@ -25,6 +25,10 @@ export const upsertPreferredLanguage = mutation({
     if (existingProfile) {
       await ctx.db.patch(existingProfile._id, {
         preferredLanguage: args.preferredLanguage,
+        reminderPreferences: existingProfile.reminderPreferences ?? {
+          enabled: true,
+          channels: ["in_app"],
+        },
         onboardingStage: existingProfile.onboardingCompleted
           ? "completed"
           : "chat",
@@ -40,6 +44,10 @@ export const upsertPreferredLanguage = mutation({
       preferredLanguage: args.preferredLanguage,
       onboardingCompleted: false,
       onboardingStage: "chat",
+      reminderPreferences: {
+        enabled: true,
+        channels: ["in_app"],
+      },
       createdAt: now,
       updatedAt: now,
     })
