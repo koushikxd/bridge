@@ -8,7 +8,7 @@ import {
   IconUser,
 } from "@tabler/icons-react"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,20 @@ export function AuthCard() {
   const [mode, setMode] = useState<AuthMode>("signIn")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
+  const [hasInvite, setHasInvite] = useState(false)
+
+  const callbackURL = hasInvite ? "/invite/resolve" : "/auth"
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const inviteFlag = params.get("invite")
+
+    if (!inviteFlag) {
+      return
+    }
+
+    setHasInvite(true)
+  }, [])
 
   const signInForm = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
@@ -48,7 +62,7 @@ export function AuthCard() {
   })
 
   function navigateToResolvedSession() {
-    window.location.assign("/auth")
+    window.location.assign(callbackURL)
   }
 
   async function submitSignIn(values: SignInInput) {
@@ -59,7 +73,7 @@ export function AuthCard() {
       const result = await authClient.signIn.email({
         email: values.email,
         password: values.password,
-        callbackURL: "/auth",
+        callbackURL,
       })
 
       if (result.error) {
@@ -82,7 +96,7 @@ export function AuthCard() {
         name: values.name,
         email: values.email,
         password: values.password,
-        callbackURL: "/auth",
+        callbackURL,
       })
 
       if (result.error) {
@@ -100,6 +114,12 @@ export function AuthCard() {
 
   return (
     <div className="w-full space-y-6">
+      {hasInvite ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground">
+          {copy("auth.inviteBanner")}
+        </div>
+      ) : null}
+
       <div className="flex justify-center">
         <div className="inline-flex rounded-full border border-border bg-muted p-1">
           <ModeButton

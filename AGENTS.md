@@ -21,6 +21,16 @@ Bridge is a multilingual AI health companion that collects patient context and r
 | `bun run typecheck` | TypeScript no-emit check                          |
 | `bun run translate` | Generate/update locale translations via lingo.dev |
 
+## Convex
+
+All backend logic lives in `convex/`. Functions are queries, mutations, or actions. Auth is wired through the `betterAuth` component defined in `convex/convex.config.ts`.
+
+- **When adding a new env variable used by Convex backend functions**, remind user to run the following command:
+  ```bash
+  npx convex env set KEY value
+  ```
+  `.env.local` values are **not** automatically available to Convex functions.
+
 ## Installing Dependencies
 
 - Runtime dependency: `bun add <package>`

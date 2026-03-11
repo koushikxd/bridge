@@ -2,19 +2,21 @@ import {
   IconActivityHeartbeat,
   IconClockHour4,
   IconLanguage,
-  IconLeaf,
   IconPill,
   IconShieldCheck,
+  IconUsers,
 } from "@tabler/icons-react"
 import Link from "next/link"
-import { redirect } from "next/navigation"
 
 import { SignOutButton } from "@/components/auth/sign-out-button"
+import { ClearInviteCookie } from "@/components/auth/clear-invite-cookie"
+import { CareNetworkManager } from "@/components/home/care-network-manager"
 import { DoseActions } from "@/components/home/dose-actions"
+import { ProgressChart } from "@/components/home/progress-chart"
 import { RecentScanItem } from "@/components/home/recent-scan-item"
 import { ScanUploadDialog } from "@/components/upload/scan-upload-dialog"
 import { api } from "@/convex/_generated/api"
-import { requireCompletedOnboarding } from "@/lib/auth-guards"
+import { getSessionContext, requireAuthenticatedUser } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
 import { localizedCopy } from "@/lib/copy"
 import {
@@ -29,23 +31,24 @@ export const metadata = {
 }
 
 export default async function Page() {
-  const { authUser, profile } = await requireCompletedOnboarding()
+  const { authUser } = await requireAuthenticatedUser()
+  const session = await getSessionContext()
 
-  if (!profile) {
-    redirect("/onboarding")
+  if (!session) {
+    return null
   }
 
-  const preferredLanguage =
-    profile.preferredLanguage as keyof typeof preferredLanguageLabels &
-      PreferredLanguage
-  const reminderTimeZone = homeTimeZone(profile)
+  const profile = session.profile
+  const locale = (profile?.preferredLanguage ?? "en") as PreferredLanguage
+  const linkedProfiles = await fetchAuthQuery(api.profiles.getLinkedProfiles, {})
+  const homeData = profile?.onboardingCompleted
+    ? await fetchAuthQuery(api.medications.getHomeData, {})
+    : null
 
   const [
-    homeData,
     homeEyebrow,
     homeTitle,
     homeBody,
-    homeLanguage,
     homeStatus,
     todayLabel,
     adherenceScoreLabel,
@@ -91,78 +94,143 @@ export default async function Page() {
     scanOrLabel,
     scanUploadingLabel,
     scanFailedLabel,
+    onboardingPromptLabel,
+    onboardingActionLabel,
+    onboardingStatusLabel,
+    linkedPeopleLabel,
+    linkedProfilesEmptyTitleLabel,
+    linkedProfilesEmptyBodyLabel,
+    linkedProfilesIncompleteBodyLabel,
+    linkedProfilesActiveMedicinesLabel,
+    progressEmptyLabel,
+    dosesSetupPromptLabel,
+    scansSetupPromptLabel,
+    caregiverAccessTitle,
+    caregiverAccessBody,
+    caregiverAccessCopy,
+    caregiverAccessCopied,
+    caregiverAccessCreating,
+    careNetworkInboundLabel,
+    careNetworkOutboundLabel,
+    careNetworkViewProfileLabel,
+    careNetworkRemoveLabel,
+    careNetworkTitleLabel,
+    careNetworkBodyLabel,
+    utilityTitleLabel,
   ] = await Promise.all([
-    fetchAuthQuery(api.medications.getHomeData, {}),
-    localizedCopy("home.eyebrow", preferredLanguage),
-    localizedCopy("home.title", preferredLanguage),
-    localizedCopy("home.body", preferredLanguage),
-    localizedCopy("home.language", preferredLanguage),
-    localizedCopy("home.status", preferredLanguage),
-    localizedCopy("home.today", preferredLanguage),
-    localizedCopy("home.adherenceScore", preferredLanguage),
-    localizedCopy("home.activeMedicines", preferredLanguage),
-    localizedCopy("home.beingTracked", preferredLanguage),
-    localizedCopy("home.nextDose", preferredLanguage),
-    localizedCopy("home.none", preferredLanguage),
-    localizedCopy("home.nothingPending", preferredLanguage),
-    localizedCopy("home.quickSupport", preferredLanguage),
-    localizedCopy("home.quickScanTitle", preferredLanguage),
-    localizedCopy("home.quickScanBody", preferredLanguage),
-    localizedCopy("home.openScanner", preferredLanguage),
-    localizedCopy("home.openSettings", preferredLanguage),
-    localizedCopy("home.signedIn", preferredLanguage),
-    localizedCopy("home.signedInHint", preferredLanguage),
-    localizedCopy("home.medicineTracking", preferredLanguage),
-    localizedCopy("home.todayDoses", preferredLanguage),
-    localizedCopy("home.todayDosesBody", preferredLanguage),
-    localizedCopy("home.completed", preferredLanguage),
-    localizedCopy("home.noDoses", preferredLanguage),
-    localizedCopy("home.doseMissing", preferredLanguage),
-    localizedCopy("home.due", preferredLanguage),
-    localizedCopy("home.dailyProgress", preferredLanguage),
-    localizedCopy("home.last7Days", preferredLanguage),
-    localizedCopy("home.recentScans", preferredLanguage),
-    localizedCopy("home.recentScansBody", preferredLanguage),
-    localizedCopy("home.noScans", preferredLanguage),
-    localizedCopy("home.view", preferredLanguage),
-    localizedCopy("home.signOut", preferredLanguage),
-    localizedCopy("home.signingOut", preferredLanguage),
-    localizedCopy("home.actionTaken", preferredLanguage),
-    localizedCopy("home.actionSnooze", preferredLanguage),
-    localizedCopy("home.actionSkip", preferredLanguage),
-    localizedCopy("home.scanDialogTitle", preferredLanguage),
-    localizedCopy("home.scanDialogBody", preferredLanguage),
-    localizedCopy("home.scanBadge", preferredLanguage),
-    localizedCopy("home.scanCamera", preferredLanguage),
-    localizedCopy("home.scanUpload", preferredLanguage),
-    localizedCopy("home.scanDesktopUpload", preferredLanguage),
-    localizedCopy("home.scanDesktopHint", preferredLanguage),
-    localizedCopy("home.scanDropHint", preferredLanguage),
-    localizedCopy("home.scanDropActive", preferredLanguage),
-    localizedCopy("home.scanOr", preferredLanguage),
-    localizedCopy("home.scanUploading", preferredLanguage),
-    localizedCopy("home.scanFailed", preferredLanguage),
+    localizedCopy("home.eyebrow", locale),
+    localizedCopy("home.title", locale),
+    localizedCopy("home.body", locale),
+    localizedCopy("home.status", locale),
+    localizedCopy("home.today", locale),
+    localizedCopy("home.adherenceScore", locale),
+    localizedCopy("home.activeMedicines", locale),
+    localizedCopy("home.beingTracked", locale),
+    localizedCopy("home.nextDose", locale),
+    localizedCopy("home.none", locale),
+    localizedCopy("home.nothingPending", locale),
+    localizedCopy("home.quickSupport", locale),
+    localizedCopy("home.quickScanTitle", locale),
+    localizedCopy("home.quickScanBody", locale),
+    localizedCopy("home.openScanner", locale),
+    localizedCopy("home.openSettings", locale),
+    localizedCopy("home.signedIn", locale),
+    localizedCopy("home.signedInHint", locale),
+    localizedCopy("home.medicineTracking", locale),
+    localizedCopy("home.todayDoses", locale),
+    localizedCopy("home.todayDosesBody", locale),
+    localizedCopy("home.completed", locale),
+    localizedCopy("home.noDoses", locale),
+    localizedCopy("home.doseMissing", locale),
+    localizedCopy("home.due", locale),
+    localizedCopy("home.dailyProgress", locale),
+    localizedCopy("home.last7Days", locale),
+    localizedCopy("home.recentScans", locale),
+    localizedCopy("home.recentScansBody", locale),
+    localizedCopy("home.noScans", locale),
+    localizedCopy("home.view", locale),
+    localizedCopy("home.signOut", locale),
+    localizedCopy("home.signingOut", locale),
+    localizedCopy("home.actionTaken", locale),
+    localizedCopy("home.actionSnooze", locale),
+    localizedCopy("home.actionSkip", locale),
+    localizedCopy("home.scanDialogTitle", locale),
+    localizedCopy("home.scanDialogBody", locale),
+    localizedCopy("home.scanBadge", locale),
+    localizedCopy("home.scanCamera", locale),
+    localizedCopy("home.scanUpload", locale),
+    localizedCopy("home.scanDesktopUpload", locale),
+    localizedCopy("home.scanDesktopHint", locale),
+    localizedCopy("home.scanDropHint", locale),
+    localizedCopy("home.scanDropActive", locale),
+    localizedCopy("home.scanOr", locale),
+    localizedCopy("home.scanUploading", locale),
+    localizedCopy("home.scanFailed", locale),
+    localizedCopy("home.onboardingPrompt", locale),
+    localizedCopy("home.onboardingAction", locale),
+    localizedCopy("home.onboardingStatus", locale),
+    localizedCopy("home.linkedPeople", locale),
+    localizedCopy("home.linkedProfilesEmptyTitle", locale),
+    localizedCopy("home.linkedProfilesEmptyBody", locale),
+    localizedCopy("home.linkedProfilesIncompleteBody", locale),
+    localizedCopy("home.linkedProfilesActiveMedicines", locale),
+    localizedCopy("home.progressEmpty", locale),
+    localizedCopy("home.dosesSetupPrompt", locale),
+    localizedCopy("home.scansSetupPrompt", locale),
+    localizedCopy("home.caregiverAccessTitle", locale),
+    localizedCopy("home.caregiverAccessBody", locale),
+    localizedCopy("home.caregiverAccessCopy", locale),
+    localizedCopy("home.caregiverAccessCopied", locale),
+    localizedCopy("home.caregiverAccessCreating", locale),
+    localizedCopy("home.careNetworkInbound", locale),
+    localizedCopy("home.careNetworkOutbound", locale),
+    localizedCopy("home.careNetworkViewProfile", locale),
+    localizedCopy("home.careNetworkRemove", locale),
+    localizedCopy("home.careNetworkTitle", locale),
+    localizedCopy("home.careNetworkBody", locale),
+    localizedCopy("home.utilityTitle", locale),
   ])
 
   const eventLabels = {
-    missed: await localizedCopy("home.event.missed", preferredLanguage),
-    reminded: await localizedCopy("home.event.reminded", preferredLanguage),
-    scheduled: await localizedCopy("home.event.scheduled", preferredLanguage),
-    skipped: await localizedCopy("home.event.skipped", preferredLanguage),
-    snoozed: await localizedCopy("home.event.snoozed", preferredLanguage),
-    taken: await localizedCopy("home.event.taken", preferredLanguage),
+    missed: await localizedCopy("home.event.missed", locale),
+    reminded: await localizedCopy("home.event.reminded", locale),
+    scheduled: await localizedCopy("home.event.scheduled", locale),
+    skipped: await localizedCopy("home.event.skipped", locale),
+    snoozed: await localizedCopy("home.event.snoozed", locale),
+    taken: await localizedCopy("home.event.taken", locale),
   }
+
+  const reminderTimeZone = homeTimeZone(homeData?.profile ?? profile)
+  const preferredLanguage = profile?.preferredLanguage
+    ? (profile.preferredLanguage as keyof typeof preferredLanguageLabels &
+        PreferredLanguage)
+    : "en"
+  const needsOnboarding = !profile?.onboardingCompleted
 
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_26%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.05),transparent_24%),linear-gradient(180deg,color-mix(in_oklch,var(--background)_92%,white)_0%,var(--background)_38%,color-mix(in_oklch,var(--background)_96%,var(--card))_100%)] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_28%),radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_26%),linear-gradient(180deg,color-mix(in_oklch,var(--background)_86%,black)_0%,var(--background)_34%,color-mix(in_oklch,var(--background)_92%,var(--card))_100%)]">
+      <ClearInviteCookie />
       <div className="mx-auto flex max-w-7xl flex-col gap-6 lg:gap-8">
-        <section className="overflow-hidden rounded-[2rem] border border-border/80 bg-card/96 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.22)]">
-          <div className="grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.82fr)] lg:gap-8 lg:p-9 xl:p-10">
-            <div className="space-y-5 lg:space-y-6">
+        {needsOnboarding ? (
+          <section className="rounded-[1.75rem] border border-primary/20 bg-primary/10 px-5 py-4 text-sm text-foreground">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>{onboardingPromptLabel}</p>
+              <Link
+                href="/onboarding"
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
+              >
+                {onboardingActionLabel}
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="overflow-hidden rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.22)] sm:p-7 lg:p-9">
+          <div className="space-y-8">
+            <div className="space-y-3">
               <p className="text-[0.68rem] font-semibold tracking-[0.28em] text-primary uppercase">
                 {homeEyebrow}
               </p>
-
               <div className="max-w-3xl space-y-3">
                 <h1 className="text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl lg:text-[3rem]">
                   {homeTitle}, {authUser.name}
@@ -171,73 +239,43 @@ export default async function Page() {
                   {homeBody}
                 </p>
               </div>
-
-              <div className="grid gap-3 sm:grid-cols-3 lg:gap-4">
-                <MetricCard
-                  detail={adherenceScoreLabel}
-                  icon={<IconShieldCheck className="size-4" />}
-                  label={todayLabel}
-                  value={`${homeData.stats.adherence}%`}
-                />
-                <MetricCard
-                  detail={beingTrackedLabel}
-                  icon={<IconPill className="size-4" />}
-                  label={activeMedicinesLabel}
-                  value={String(homeData.medicines.length)}
-                />
-                <MetricCard
-                  detail={
-                    homeData.nextDose?.medicineName ?? nothingPendingLabel
-                  }
-                  icon={<IconClockHour4 className="size-4" />}
-                  label={nextDoseLabel}
-                  value={
-                    homeData.nextDose
-                      ? formatTimestampInTimeZone(
-                          homeData.nextDose.dueAt,
-                          reminderTimeZone
-                        )
-                      : noneLabel
-                  }
-                />
-              </div>
             </div>
 
-            <div className="flex h-full flex-col justify-between gap-4 rounded-[1.75rem] border border-border/80 bg-[color-mix(in_oklch,var(--card)_72%,var(--muted))] p-4 sm:p-5 lg:p-6 dark:bg-background/88">
-              <div className="space-y-4">
-                <div className="rounded-[1.5rem] border border-border/80 bg-card p-4 sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-foreground/70">
-                      <IconLanguage className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                        {homeLanguage}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                        {preferredLanguageLabels[preferredLanguage]}
-                      </p>
-                      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        {homeStatus}
-                      </p>
-                    </div>
-                  </div>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,1.1fr)]">
+              <MetricCard
+                detail={adherenceScoreLabel}
+                icon={<IconShieldCheck className="size-4" />}
+                label={todayLabel}
+                value={`${homeData?.stats.adherence ?? 0}%`}
+              />
+              <MetricCard
+                detail={homeData?.nextDose?.medicineName ?? nothingPendingLabel}
+                icon={<IconClockHour4 className="size-4" />}
+                label={nextDoseLabel}
+                value={
+                  homeData?.nextDose
+                    ? formatTimestampInTimeZone(
+                        homeData.nextDose.dueAt,
+                        reminderTimeZone
+                      )
+                    : noneLabel
+                }
+              />
+              <section className="rounded-[1.5rem] border border-border/80 bg-[color-mix(in_oklch,var(--card)_74%,var(--muted))] p-5">
+                <div className="space-y-2">
+                  <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-primary uppercase">
+                    {quickSupportLabel}
+                  </p>
+                  <p className="text-lg font-semibold tracking-tight text-foreground">
+                    {quickScanTitle}
+                  </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {quickScanBody}
+                  </p>
                 </div>
 
-                <div className="rounded-[1.5rem] border border-border/80 bg-card p-4 sm:p-5">
-                  <div className="space-y-2">
-                    <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-primary uppercase">
-                      {quickSupportLabel}
-                    </p>
-                    <p className="text-lg font-semibold tracking-tight text-foreground">
-                      {quickScanTitle}
-                    </p>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      {quickScanBody}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {profile?.onboardingCompleted ? (
                     <ScanUploadDialog
                       badge={scanBadge}
                       body={scanDialogBody}
@@ -254,188 +292,269 @@ export default async function Page() {
                       triggerLabel={openScannerLabel}
                       uploadingLabel={scanUploadingLabel}
                     />
-                    <SecondaryLink href="/settings">
-                      {openSettingsLabel}
+                  ) : (
+                    <SecondaryLink href="/onboarding">
+                      {onboardingActionLabel}
                     </SecondaryLink>
+                  )}
+                  <SecondaryLink href="/settings">
+                    {openSettingsLabel}
+                  </SecondaryLink>
+                </div>
+              </section>
+            </div>
+
+            <section className="rounded-[2rem] border border-border/80 bg-background/72 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6 lg:p-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
+                    {medicineTrackingLabel}
+                  </p>
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.9rem]">
+                      {todayDosesLabel}
+                    </h2>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {todayDosesBody}
+                    </p>
                   </div>
+                </div>
+
+                <div className="grid gap-3 sm:min-w-72 sm:grid-cols-2">
+                  <CompactMetricCard
+                    icon={<IconPill className="size-4" />}
+                    label={activeMedicinesLabel}
+                    value={String(homeData?.medicines.length ?? 0)}
+                    detail={beingTrackedLabel}
+                  />
+                  <CompactMetricCard
+                    icon={<IconShieldCheck className="size-4" />}
+                    label={completedLabel}
+                    value={`${homeData?.stats.taken ?? 0}/${homeData?.stats.total ?? 0}`}
+                    detail={todayLabel}
+                  />
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3 rounded-[1.25rem] border border-dashed border-border/80 bg-card/55 px-4 py-3 dark:bg-transparent">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">
-                    {signedInLabel}
+              <div className="mt-6 flex flex-col gap-4">
+                {!homeData || homeData.todayDoses.length === 0 ? (
+                  <EmptyStateCard
+                    body={needsOnboarding ? dosesSetupPromptLabel : noDosesLabel}
+                    icon={<IconPill className="size-5" />}
+                  />
+                ) : (
+                  homeData.todayDoses.map((dose) => {
+                    const isDone = dose.eventType !== "scheduled"
+
+                    return (
+                      <article
+                        key={dose._id}
+                        className="rounded-[1.5rem] border border-border/80 bg-card p-4 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.28)] sm:p-5"
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="min-w-0 space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                                {dose.medicineName}
+                              </p>
+                              <StatusPill label={eventLabels[dose.eventType]} />
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+                              <span className="rounded-full border border-border/80 bg-background px-3 py-1 font-medium text-foreground/90 shadow-sm">
+                                {dose.dosage ?? doseMissingLabel}
+                              </span>
+                              <span>
+                                {dueLabel}{" "}
+                                {formatTimestampInTimeZone(
+                                  dose.dueAt,
+                                  reminderTimeZone
+                                )}
+                              </span>
+                            </div>
+
+                            {dose.instructions ? (
+                              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                                {dose.instructions}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="w-full lg:w-auto lg:min-w-64">
+                            <DoseActions
+                              labels={{
+                                skip: skipActionLabel,
+                                snooze: snoozeActionLabel,
+                                taken: takenActionLabel,
+                              }}
+                              eventId={dose._id}
+                              disabled={isDone}
+                            />
+                          </div>
+                        </div>
+                      </article>
+                    )
+                  })
+                )}
+              </div>
+            </section>
+
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.86fr)]">
+              <section className="rounded-[2rem] border border-border/80 bg-background/72 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
+                <div className="space-y-2">
+                  <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
+                    {dailyProgressLabel}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {signedInHint}
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                    {last7DaysLabel}
+                  </h2>
+                </div>
+
+                {!homeData ? (
+                  <EmptyStateCard
+                    body={progressEmptyLabel}
+                    icon={<IconShieldCheck className="size-5" />}
+                  />
+                ) : (
+                  <ProgressChart days={homeData.progress} />
+                )}
+              </section>
+
+              <section className="rounded-[2rem] border border-border/80 bg-background/72 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
+                <div className="space-y-2">
+                  <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
+                    {recentScansLabel}
+                  </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {recentScansBody}
                   </p>
                 </div>
+
+                <div className="mt-5 flex flex-col gap-3">
+                  {!homeData || homeData.recentAnalyses.length === 0 ? (
+                    <EmptyStateCard
+                      body={needsOnboarding ? scansSetupPromptLabel : noScansLabel}
+                      icon={<IconActivityHeartbeat className="size-5" />}
+                    />
+                  ) : (
+                    homeData.recentAnalyses.map((entry) => (
+                      <RecentScanItem
+                        key={entry.upload._id}
+                        uploadId={String(entry.upload._id)}
+                        detectedItem={entry.analysis?.detectedItem}
+                        safetyStatus={entry.analysis?.safetyStatus}
+                        fileName={entry.upload.fileName}
+                        uploadStatus={entry.upload.status}
+                        viewLabel={viewLabel}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <section className="rounded-[1.5rem] border border-border/80 bg-background/55 p-4 sm:p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[0.68rem] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                      {utilityTitleLabel}
+                    </p>
+                    <p className="mt-2 text-base font-semibold text-foreground">
+                      {preferredLanguageLabels[preferredLanguage]}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {profile?.onboardingCompleted
+                        ? homeStatus
+                        : onboardingStatusLabel}
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-foreground/70">
+                      <IconLanguage className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {signedInLabel}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {signedInHint}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 <SignOutButton
                   label={signOutLabel}
                   pendingLabel={signingOutLabel}
                 />
               </div>
-            </div>
+            </section>
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <div className="rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6 lg:p-7">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-2">
-                <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
-                  {medicineTrackingLabel}
-                </p>
-                <div className="space-y-1">
-                  <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.9rem]">
-                    {todayDosesLabel}
-                  </h2>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {todayDosesBody}
-                  </p>
-                </div>
-              </div>
-
-              <div className="w-full rounded-[1.25rem] border border-border/80 bg-background px-4 py-3 sm:w-auto sm:min-w-44">
-                <p className="text-[0.7rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-                  {completedLabel}
-                </p>
-                <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-                  {homeData.stats.taken}/{homeData.stats.total}
-                </p>
-              </div>
+        <section className="rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-7">
+          <div className="flex items-start gap-3">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-foreground/65">
+              <IconUsers className="size-5" />
             </div>
-
-            <div className="mt-6 flex flex-col gap-4">
-              {homeData.todayDoses.length === 0 ? (
-                <EmptyStateCard
-                  body={noDosesLabel}
-                  icon={<IconLeaf className="size-5" />}
-                />
-              ) : (
-                homeData.todayDoses.map((dose) => {
-                  const isDone = dose.eventType !== "scheduled"
-
-                  return (
-                    <article
-                      key={dose._id}
-                      className="rounded-[1.5rem] border border-border/80 bg-background p-4 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.28)] sm:p-5 dark:shadow-[0_10px_30px_-24px_rgba(15,23,42,0.7)]"
-                    >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0 space-y-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                              {dose.medicineName}
-                            </p>
-                            <StatusPill label={eventLabels[dose.eventType]} />
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-                            <span className="rounded-full border border-border/80 bg-background px-3 py-1 font-medium text-foreground/90 shadow-sm dark:bg-muted/80 dark:shadow-none">
-                              {dose.dosage ?? doseMissingLabel}
-                            </span>
-                            <span>
-                              {dueLabel}{" "}
-                              {formatTimestampInTimeZone(
-                                dose.dueAt,
-                                reminderTimeZone
-                              )}
-                            </span>
-                          </div>
-
-                          {dose.instructions ? (
-                            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                              {dose.instructions}
-                            </p>
-                          ) : null}
-                        </div>
-
-                        <div className="w-full lg:w-auto lg:min-w-64">
-                          <DoseActions
-                            labels={{
-                              skip: skipActionLabel,
-                              snooze: snoozeActionLabel,
-                              taken: takenActionLabel,
-                            }}
-                            eventId={dose._id}
-                            disabled={isDone}
-                          />
-                        </div>
-                      </div>
-                    </article>
-                  )
-                })
-              )}
+            <div className="min-w-0">
+              <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
+                {linkedPeopleLabel}
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+                {careNetworkTitleLabel}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+                {careNetworkBodyLabel}
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-col gap-6">
-            <section className="rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
-              <div className="space-y-2">
-                <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
-                  {dailyProgressLabel}
-                </p>
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                  {last7DaysLabel}
-                </h2>
-              </div>
-
-              <div className="mt-6 grid grid-cols-7 gap-2 sm:gap-3">
-                {homeData.progress.map((day) => (
-                  <div
-                    key={day.label}
-                    className="flex min-w-0 flex-col items-center gap-3"
-                  >
-                    <div className="flex h-36 w-full items-end rounded-[1.25rem] bg-muted p-2 sm:h-40">
-                      <div
-                        className="w-full rounded-[0.9rem] bg-[linear-gradient(180deg,color-mix(in_oklch,var(--primary)_75%,white),var(--primary))] transition-all"
-                        style={{ height: `${Math.max(day.percent, 8)}%` }}
-                      />
-                    </div>
-                    <div className="space-y-1 text-center">
-                      <p className="text-sm font-semibold text-foreground">
-                        {day.percent}%
-                      </p>
-                      <p className="text-[0.68rem] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                        {day.label}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
-              <div className="space-y-2">
-                <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
-                  {recentScansLabel}
-                </p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {recentScansBody}
-                </p>
-              </div>
-
-              <div className="mt-5 flex flex-col gap-3">
-                {homeData.recentAnalyses.length === 0 ? (
-                  <EmptyStateCard
-                    body={noScansLabel}
-                    icon={<IconActivityHeartbeat className="size-5" />}
-                  />
-                ) : (
-                  homeData.recentAnalyses.map((entry) => (
-                    <RecentScanItem
-                      key={entry.upload._id}
-                      uploadId={entry.upload._id}
-                      detectedItem={entry.analysis?.detectedItem}
-                      safetyStatus={entry.analysis?.safetyStatus}
-                      fileName={entry.upload.fileName}
-                      uploadStatus={entry.upload.status}
-                      viewLabel={viewLabel}
-                    />
-                  ))
-                )}
-              </div>
-            </section>
+          <div className="mt-6">
+            <CareNetworkManager
+              connections={linkedProfiles.connections.map((item) => ({
+                linkId: String(item.linkId),
+                userId: item.userId,
+                profileId: item.profileId ? String(item.profileId) : null,
+                name: item.name,
+                email: item.email,
+                direction: item.direction,
+                canOpenProfile: item.canOpenProfile,
+                activeMedicines: item.activeMedicines,
+              }))}
+              invitePath="/api/caregiver-invite?token="
+              emptyTitle={
+                profile ? linkedProfilesEmptyTitleLabel : caregiverAccessTitle
+              }
+              emptyBody={
+                profile
+                  ? linkedProfilesEmptyBodyLabel
+                  : linkedProfilesIncompleteBodyLabel
+              }
+              activeMedicinesLabel={linkedProfilesActiveMedicinesLabel}
+              connectionLabels={{
+                inbound: careNetworkInboundLabel,
+                outbound: careNetworkOutboundLabel,
+                viewProfile: careNetworkViewProfileLabel,
+                remove: careNetworkRemoveLabel,
+              }}
+              inviteUiText={{
+                title: caregiverAccessTitle,
+                body: caregiverAccessBody,
+                copy: caregiverAccessCopy,
+                copied: caregiverAccessCopied,
+                creating: caregiverAccessCreating,
+              }}
+              inviteAction={
+                needsOnboarding
+                  ? {
+                      href: "/onboarding",
+                      label: onboardingActionLabel,
+                    }
+                  : null
+              }
+            />
           </div>
         </section>
       </div>
@@ -443,44 +562,73 @@ export default async function Page() {
   )
 }
 
-function homeTimeZone(profile: {
-  reminderPreferences?: {
-    timezone?: string
-  }
-}) {
-  return profile.reminderPreferences?.timezone ?? "UTC"
-}
-
 function MetricCard({
-  detail,
   icon,
   label,
   value,
+  detail,
 }: {
-  detail: string
   icon: React.ReactNode
   label: string
   value: string
+  detail: string
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-border/80 bg-card p-4 sm:p-5">
+    <div className="rounded-[1.5rem] border border-border/80 bg-background/78 p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[0.68rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
             {label}
           </p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-[2rem]">
+          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
             {value}
           </p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {detail}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
         </div>
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-foreground/65 dark:bg-muted/60">
+        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-card text-foreground/65">
           {icon}
         </div>
       </div>
     </div>
+  )
+}
+
+function CompactMetricCard({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  detail: string
+}) {
+  return (
+    <div className="rounded-[1.25rem] border border-border/80 bg-card px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[0.68rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+            {label}
+          </p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+            {value}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
+        </div>
+        <div className="flex size-9 items-center justify-center rounded-2xl border border-border bg-background text-foreground/65">
+          {icon}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatusPill({ label }: { label: string }) {
+  return (
+    <span className="rounded-full border border-border/80 bg-background px-3 py-1 text-[0.68rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+      {label}
+    </span>
   )
 }
 
@@ -492,22 +640,14 @@ function EmptyStateCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-border/80 bg-card/80 px-5 py-6 dark:bg-background/55">
+    <div className="rounded-[1.5rem] border border-dashed border-border/80 bg-background/50 px-4 py-5">
       <div className="flex items-start gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-background text-foreground/75 dark:bg-muted">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-foreground/70">
           {icon}
         </div>
         <p className="text-sm leading-6 text-muted-foreground">{body}</p>
       </div>
     </div>
-  )
-}
-
-function StatusPill({ label }: { label: string }) {
-  return (
-    <span className="rounded-full border border-border/80 bg-background px-3 py-1 text-[0.7rem] font-semibold tracking-[0.12em] text-foreground capitalize shadow-sm dark:bg-muted dark:shadow-none">
-      {label}
-    </span>
   )
 }
 
@@ -526,4 +666,17 @@ function SecondaryLink({
       {children}
     </Link>
   )
+}
+
+function homeTimeZone(
+  profile:
+    | {
+        reminderPreferences?: {
+          timezone?: string
+        }
+      }
+    | null
+    | undefined
+) {
+  return profile?.reminderPreferences?.timezone ?? "UTC"
 }

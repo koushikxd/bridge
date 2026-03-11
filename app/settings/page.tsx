@@ -4,7 +4,7 @@ import { MedicineSettingsForm } from "@/components/settings/medicine-settings-fo
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form"
 import { ReminderPreferencesCard } from "@/components/reminders/reminder-preferences-card"
 import { api } from "@/convex/_generated/api"
-import { requireCompletedOnboarding } from "@/lib/auth-guards"
+import { requireAuthenticatedUser } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
 import { localizedCopy } from "@/lib/copy"
 
@@ -20,9 +20,11 @@ export const metadata = {
 }
 
 export default async function SettingsPage() {
-  const { profile } = await requireCompletedOnboarding()
+  const { profile } = await requireAuthenticatedUser()
   const locale = profile?.preferredLanguage ?? "en"
-  const settingsData = await fetchAuthQuery(api.medications.getSettingsData, {})
+  const settingsData = profile
+    ? await fetchAuthQuery(api.medications.getSettingsData, {})
+    : null
 
   const [
     settingsEyebrow,
@@ -30,8 +32,6 @@ export default async function SettingsPage() {
     settingsBody,
     settingsBackHome,
     settingsQuickBackBody,
-    settingsQuickScanTitle,
-    settingsQuickScanBody,
     profileEyebrow,
     profileTitle,
     profileBody,
@@ -98,8 +98,6 @@ export default async function SettingsPage() {
     localizedCopy("settings.body", locale),
     localizedCopy("settings.backHome", locale),
     localizedCopy("settings.quick.backBody", locale),
-    localizedCopy("settings.quick.scanTitle", locale),
-    localizedCopy("settings.quick.scanBody", locale),
     localizedCopy("settings.profile.eyebrow", locale),
     localizedCopy("settings.profile.title", locale),
     localizedCopy("settings.profile.body", locale),
@@ -236,8 +234,8 @@ export default async function SettingsPage() {
     <main className="min-h-svh bg-background px-6 py-8 md:py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <section className="rounded-[2rem] border border-border bg-card p-8 shadow-sm">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)] lg:items-start">
+            <div className="min-w-0">
               <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
                 {settingsEyebrow}
               </p>
@@ -250,36 +248,56 @@ export default async function SettingsPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
+              {!settingsData?.profile.onboardingCompleted ? (
+                <QuickLink
+                  href="/onboarding"
+                  title="Complete onboarding"
+                  body="Finish your Bridge setup or add your own medicines later."
+                />
+              ) : null}
               <QuickLink
                 href="/"
                 title={settingsBackHome}
                 body={settingsQuickBackBody}
               />
-              <QuickLink
-                href="/scan"
-                title={settingsQuickScanTitle}
-                body={settingsQuickScanBody}
-              />
             </div>
           </div>
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <ProfileSettingsForm
-            profile={settingsData.profile}
-            uiText={profileUiText}
-          />
-          <MedicineSettingsForm
-            medicines={settingsData.medicines}
-            reminderPreferences={settingsData.reminderPreferences}
-            uiText={medicineUiText}
-          />
-        </div>
+        {!settingsData?.profile.onboardingCompleted ? (
+          <section className="rounded-[1.75rem] border border-primary/20 bg-primary/10 px-5 py-4 text-sm text-foreground">
+            Complete onboarding flow to create your own Bridge assistance and
+            tracking.
+          </section>
+        ) : null}
 
-        <ReminderPreferencesCard
-          reminderPreferences={settingsData.reminderPreferences}
-          uiText={reminderUiText}
-        />
+        {settingsData ? (
+          <>
+            <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+              <ProfileSettingsForm
+                profile={settingsData.profile}
+                uiText={profileUiText}
+              />
+              <MedicineSettingsForm
+                medicines={settingsData.medicines}
+                reminderPreferences={settingsData.reminderPreferences}
+                uiText={medicineUiText}
+              />
+            </div>
+
+            <ReminderPreferencesCard
+              reminderPreferences={settingsData.reminderPreferences}
+              uiText={reminderUiText}
+            />
+          </>
+        ) : (
+          <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
+            <p className="text-sm text-muted-foreground">
+              Start onboarding to create your Bridge profile before editing
+              settings.
+            </p>
+          </section>
+        )}
       </div>
     </main>
   )

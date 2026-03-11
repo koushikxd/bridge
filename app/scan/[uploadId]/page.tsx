@@ -1,14 +1,14 @@
 import { IconArrowLeft, IconSparkles } from "@tabler/icons-react"
 import Image from "next/image"
 import Link from "next/link"
-import { notFound, redirect } from "next/navigation"
+import { notFound } from "next/navigation"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { ScanProcessor } from "@/components/upload/scan-processor"
 import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
-import { requireCompletedOnboarding } from "@/lib/auth-guards"
+import { requireAuthenticatedUser } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
 import { localizedCopy } from "@/lib/copy"
 
@@ -70,11 +70,7 @@ export default async function ScanResultPage({
 }: {
   params: Promise<{ uploadId: string }>
 }) {
-  const { profile } = await requireCompletedOnboarding()
-
-  if (!profile) {
-    redirect("/onboarding")
-  }
+  await requireAuthenticatedUser()
 
   const { uploadId } = await params
   const result = await fetchAuthQuery(api.uploads.getUploadResult, {
@@ -85,7 +81,7 @@ export default async function ScanResultPage({
     notFound()
   }
 
-  const lang = profile.preferredLanguage
+  const lang = result.profile.preferredLanguage
 
   const [
     backHomeLabel,

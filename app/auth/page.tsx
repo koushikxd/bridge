@@ -1,10 +1,21 @@
 import { IconHeartHandshake } from "@tabler/icons-react"
+import { cookies } from "next/headers"
 
 import { AuthCard } from "@/components/auth/auth-card"
 import { redirectAuthenticatedUser } from "@/lib/auth-guards"
+import { isAuthenticated } from "@/lib/auth-server"
+import { caregiverInviteCookieName } from "@/lib/caregiver-invite"
 import { copy } from "@/lib/copy"
+import { redirect } from "next/navigation"
 
 export default async function AuthPage() {
+  const cookieStore = await cookies()
+  const inviteToken = cookieStore.get(caregiverInviteCookieName)?.value
+
+  if (inviteToken && (await isAuthenticated())) {
+    redirect("/invite/resolve")
+  }
+
   await redirectAuthenticatedUser()
 
   return (
@@ -24,6 +35,11 @@ export default async function AuthPage() {
         </header>
 
         <AuthCard />
+        {inviteToken ? (
+          <p className="text-center text-xs text-muted-foreground">
+            {copy("auth.inviteHint")}
+          </p>
+        ) : null}
       </div>
     </main>
   )

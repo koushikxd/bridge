@@ -49,6 +49,7 @@ export function OnboardingFlow({
     medicationInstructions: string
     medicationDuration: string
     medicationTimes: string
+    hasCaregiverLinks?: boolean
   }
 }) {
   const [stepOverride, setStepOverride] = useState<OnboardingStep | null>(null)
@@ -79,9 +80,35 @@ export function OnboardingFlow({
             onboardingSaving: uiText.onboardingSaving,
             onboardingBody: uiText.onboardingBody,
           }}
-          onComplete={() => setStepOverride("chat")}
+          onComplete={() =>
+            setStepOverride(uiText.hasCaregiverLinks ? "medications" : "chat")
+          }
         />
       </div>
+    )
+  }
+
+  if (uiText.hasCaregiverLinks) {
+    return (
+      <MedicationOnboardingForm
+        isCaregiverShortcut
+        uiText={{
+          eyebrow: uiText.medicationEyebrow,
+          title: uiText.medicationTitle,
+          body: uiText.medicationBody,
+          addMedicine: uiText.medicationAdd,
+          addTime: uiText.medicationAddTime,
+          save: uiText.medicationSave,
+          saving: uiText.medicationSaving,
+          skip: uiText.medicationSkip,
+          medicineName: uiText.medicationName,
+          dosage: uiText.medicationDosage,
+          purpose: uiText.medicationPurpose,
+          instructions: uiText.medicationInstructions,
+          duration: uiText.medicationDuration,
+          times: uiText.medicationTimes,
+        }}
+      />
     )
   }
 

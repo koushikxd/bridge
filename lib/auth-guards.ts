@@ -22,14 +22,40 @@ export async function getOptionalSessionState() {
   }
 }
 
-export async function redirectAuthenticatedUser() {
+export async function getSessionContext() {
   const state = await getOptionalSessionState()
+
+  if (!state) {
+    return null
+  }
+
+  try {
+    const sessionContext = await fetchAuthQuery(
+      api.profiles.getSessionContext,
+      {}
+    )
+
+    return {
+      ...state,
+      ...sessionContext,
+    }
+  } catch {
+    return {
+      ...state,
+      hasCaregiverLinks: false,
+      linkedProfileIds: [],
+    }
+  }
+}
+
+export async function redirectAuthenticatedUser() {
+  const state = await getSessionContext()
 
   if (!state) {
     return
   }
 
-  if (state.profile?.onboardingCompleted) {
+  if (state.profile?.preferredLanguage) {
     redirect("/")
   }
 
@@ -37,7 +63,7 @@ export async function redirectAuthenticatedUser() {
 }
 
 export async function requireAuthenticatedUser() {
-  const state = await getOptionalSessionState()
+  const state = await getSessionContext()
 
   if (!state) {
     redirect("/auth")
@@ -49,7 +75,7 @@ export async function requireAuthenticatedUser() {
 export async function requirePendingOnboarding() {
   const state = await requireAuthenticatedUser()
 
-  if (state.profile?.onboardingCompleted) {
+  if (state.profile?.preferredLanguage && state.profile?.onboardingCompleted) {
     redirect("/")
   }
 
@@ -60,7 +86,7 @@ export async function requireCompletedOnboarding() {
   const state = await requireAuthenticatedUser()
 
   if (!state.profile?.onboardingCompleted) {
-    redirect("/onboarding")
+    redirect("/")
   }
 
   return state

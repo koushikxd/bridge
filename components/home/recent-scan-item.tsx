@@ -16,6 +16,7 @@ export function RecentScanItem({
   fileName,
   uploadStatus,
   viewLabel,
+  hideDelete = false,
 }: {
   uploadId: string
   detectedItem?: string | null
@@ -23,6 +24,7 @@ export function RecentScanItem({
   fileName: string
   uploadStatus: string
   viewLabel: string
+  hideDelete?: boolean
 }) {
   const router = useRouter()
   const deleteUpload = useMutation(api.uploads.deleteUpload)
@@ -58,15 +60,17 @@ export function RecentScanItem({
           >
             {viewLabel}
           </Link>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="rounded-full bg-muted p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
-            aria-label="Delete scan"
-          >
-            <IconTrash className="size-3.5" />
-          </button>
+          {!hideDelete ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="rounded-full bg-muted p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              aria-label="Delete scan"
+            >
+              <IconTrash className="size-3.5" />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

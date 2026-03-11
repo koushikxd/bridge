@@ -1,7 +1,10 @@
 import { v } from "convex/values"
 
 import { mutation, query } from "./_generated/server"
-import { requireCurrentProfile } from "./profile_helpers"
+import {
+  ensureCanAccessProfile,
+  requireCurrentProfile,
+} from "./profile_helpers"
 import {
   artifactTypeValidator,
   preferredLanguageValidator,
@@ -52,24 +55,30 @@ export const getUploadResult = query({
     uploadId: v.id("uploads"),
   },
   handler: async (ctx, args) => {
-    const { profile } = await requireCurrentProfile(ctx)
     const upload = await ctx.db.get(args.uploadId)
 
-    if (!upload || upload.profileId !== profile._id) {
+    if (!upload) {
       return null
     }
 
-    const analysis = await ctx.db
-      .query("analysisResults")
-      .withIndex("uploadId", (q) => q.eq("uploadId", upload._id))
-      .unique()
+    try {
+      const access = await ensureCanAccessProfile(ctx, upload.profileId)
 
-    return {
-      upload,
-      analysis,
-      fileUrl: upload.storageId
-        ? await ctx.storage.getUrl(upload.storageId)
-        : null,
+      const analysis = await ctx.db
+        .query("analysisResults")
+        .withIndex("uploadId", (q) => q.eq("uploadId", upload._id))
+        .unique()
+
+      return {
+        upload,
+        analysis,
+        profile: access.profile,
+        fileUrl: upload.storageId
+          ? await ctx.storage.getUrl(upload.storageId)
+          : null,
+      }
+    } catch {
+      return null
     }
   },
 })
@@ -179,6 +188,34 @@ export const deleteUpload = mutation({
     }
 
     await ctx.db.delete(upload._id)
+  },
+})
+
+export const listAccessibleUploads = query({
+  args: {
+    profileId: v.id("profiles"),
+  },
+  handler: async (ctx, args) => {
+    const { profile } = await ensureCanAccessProfile(ctx, args.profileId)
+    const uploads = await ctx.db
+      .query("uploads")
+      .withIndex("profileId_createdAt", (q) => q.eq("profileId", profile._id))
+      .order("desc")
+      .take(20)
+
+    return await Promise.all(
+      uploads.map(async (upload) => {
+        const analysis = await ctx.db
+          .query("analysisResults")
+          .withIndex("uploadId", (q) => q.eq("uploadId", upload._id))
+          .unique()
+
+        return {
+          upload,
+          analysis,
+        }
+      })
+    )
   },
 })
 

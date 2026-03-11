@@ -36,8 +36,10 @@ const emptyMedicine = (): MedicationDraft => ({
 })
 
 export function MedicationOnboardingForm({
+  isCaregiverShortcut = false,
   uiText,
 }: {
+  isCaregiverShortcut?: boolean
   uiText: {
     eyebrow: string
     title: string
@@ -166,6 +168,27 @@ export function MedicationOnboardingForm({
   }
 
   async function handleSkip() {
+    if (isCaregiverShortcut) {
+      setError(null)
+      setIsPending(true)
+
+      try {
+        await completeOnboarding({})
+        router.replace("/")
+        router.refresh()
+      } catch (caughtError) {
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Could not finish onboarding right now."
+        )
+      } finally {
+        setIsPending(false)
+      }
+
+      return
+    }
+
     await finalize([])
   }
 

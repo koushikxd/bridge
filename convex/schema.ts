@@ -169,4 +169,13 @@ export default defineSchema({
     .index("patientProfileId", ["patientProfileId"])
     .index("caregiverUserId", ["caregiverUserId"])
     .index("patientProfileId_status", ["patientProfileId", "status"]),
+  caregiverInvites: defineTable({
+    patientProfileId: v.id("profiles"),
+    token: v.string(),
+    createdByUserId: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("patientProfileId", ["patientProfileId"])
+    .index("token", ["token"]),
 })

@@ -8,15 +8,19 @@ export const metadata = {
 }
 
 export default async function OnboardingPage() {
-  const { authUser, profile } = await requirePendingOnboarding()
+  const { authUser, profile, hasCaregiverLinks } =
+    await requirePendingOnboarding()
 
   const hasLanguage = !!profile?.preferredLanguage
   const locale = profile?.preferredLanguage ?? "en"
-  const initialStep = !hasLanguage
-    ? "language"
-    : profile?.onboardingStage === "medications"
-      ? "medications"
-      : "chat"
+  const initialStep =
+    !profile || profile.onboardingStage === "language" || !hasLanguage
+      ? "language"
+      : hasCaregiverLinks
+        ? "medications"
+        : profile?.onboardingStage === "medications"
+          ? "medications"
+          : "chat"
 
   const [
     onboardingEyebrow,
@@ -115,6 +119,7 @@ export default async function OnboardingPage() {
             medicationInstructions,
             medicationDuration,
             medicationTimes,
+            hasCaregiverLinks,
           }}
         />
       </div>
