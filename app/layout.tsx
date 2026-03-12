@@ -1,11 +1,9 @@
 import type { Metadata } from "next"
 
 import "./globals.css"
-import { BridgeAssistant } from "@/components/assistant/bridge-assistant"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { ConvexClientProvider } from "@/components/convex-client-provider"
-import { LocalReminderManager } from "@/components/reminders/local-reminder-manager"
 import { cn } from "@/lib/utils"
 import { Nunito_Sans } from "next/font/google"
 
@@ -43,8 +41,6 @@ export default function RootLayout({
         <ConvexClientProvider>
           <ThemeProvider>
             <ThemeToggle />
-            <LocalReminderManager />
-            <BridgeAssistant />
             {children}
           </ThemeProvider>
         </ConvexClientProvider>

@@ -9,7 +9,7 @@ import {
   IconSend,
   IconSparkles,
 } from "@tabler/icons-react"
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react"
+import { useEffect, useRef, useState, type RefObject } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -52,30 +52,6 @@ export function BridgeAssistantShell({
 }) {
   const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
-  const [input, setInput] = useState("")
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  const { messages, sendMessage, status, error } = useChat({ transport })
-  const isLoading = status === "streaming" || status === "submitted"
-
-  const panel = useMemo(
-    () => (
-      <AssistantPanel
-        error={error}
-        input={input}
-        isLoading={isLoading}
-        messages={messages}
-        preferredLanguage={preferredLanguage}
-        scrollRef={scrollRef}
-        sendMessage={sendMessage}
-        setInput={setInput}
-        textareaRef={textareaRef}
-        uiText={uiText}
-      />
-    ),
-    [error, input, isLoading, messages, preferredLanguage, sendMessage, uiText]
-  )
 
   return (
     <>
@@ -88,7 +64,12 @@ export function BridgeAssistantShell({
             <DrawerHeader className="border-b border-border/70 px-5 pt-3 pb-4 text-left">
               <MobileHeader uiText={uiText} />
             </DrawerHeader>
-            {panel}
+            {open ? (
+              <AssistantChatSession
+                preferredLanguage={preferredLanguage}
+                uiText={uiText}
+              />
+            ) : null}
           </DrawerContent>
         </Drawer>
       ) : (
@@ -102,7 +83,12 @@ export function BridgeAssistantShell({
             <SheetHeader className="border-b border-border/70 px-5 py-4">
               <DesktopHeader uiText={uiText} />
             </SheetHeader>
-            {panel}
+            {open ? (
+              <AssistantChatSession
+                preferredLanguage={preferredLanguage}
+                uiText={uiText}
+              />
+            ) : null}
           </SheetContent>
         </Sheet>
       )}
@@ -115,6 +101,35 @@ export function BridgeAssistantShell({
         />
       ) : null}
     </>
+  )
+}
+
+function AssistantChatSession({
+  preferredLanguage,
+  uiText,
+}: {
+  preferredLanguage: string
+  uiText: AssistantText
+}) {
+  const [input, setInput] = useState("")
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const { messages, sendMessage, status, error } = useChat({ transport })
+  const isLoading = status === "streaming" || status === "submitted"
+
+  return (
+    <AssistantPanel
+      error={error}
+      input={input}
+      isLoading={isLoading}
+      messages={messages}
+      preferredLanguage={preferredLanguage}
+      scrollRef={scrollRef}
+      sendMessage={sendMessage}
+      setInput={setInput}
+      textareaRef={textareaRef}
+      uiText={uiText}
+    />
   )
 }
 
@@ -203,7 +218,7 @@ function AssistantPanel({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     })
-  })
+  }, [messages, scrollRef])
 
   useEffect(() => {
     if (!isLoading) {

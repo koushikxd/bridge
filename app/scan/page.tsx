@@ -1,9 +1,10 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
+import { CompletedOnboardingExtras } from "@/components/app-shell/completed-onboarding-extras"
 import { ScanUploadDialog } from "@/components/upload/scan-upload-dialog"
 import { requireCompletedOnboarding } from "@/lib/auth-guards"
-import { localizedCopy } from "@/lib/copy"
+import { localizedCopyMap } from "@/lib/copy"
 
 export const metadata = {
   title: "Scan | Bridge",
@@ -17,70 +18,57 @@ export default async function ScanPage() {
     redirect("/onboarding")
   }
 
-  const [
-    backHomeLabel,
-    scanDialogTitle,
-    scanDialogBody,
-    scanBadge,
-    scanCameraLabel,
-    scanUploadLabel,
-    scanDesktopUploadLabel,
-    scanDesktopHint,
-    scanDropHint,
-    scanDropActiveLabel,
-    scanOrLabel,
-    scanUploadingLabel,
-    scanFailedLabel,
-  ] = await Promise.all([
-    localizedCopy("settings.backHome", profile.preferredLanguage),
-    localizedCopy("home.scanDialogTitle", profile.preferredLanguage),
-    localizedCopy("home.scanDialogBody", profile.preferredLanguage),
-    localizedCopy("home.scanBadge", profile.preferredLanguage),
-    localizedCopy("home.scanCamera", profile.preferredLanguage),
-    localizedCopy("home.scanUpload", profile.preferredLanguage),
-    localizedCopy("home.scanDesktopUpload", profile.preferredLanguage),
-    localizedCopy("home.scanDesktopHint", profile.preferredLanguage),
-    localizedCopy("home.scanDropHint", profile.preferredLanguage),
-    localizedCopy("home.scanDropActive", profile.preferredLanguage),
-    localizedCopy("home.scanOr", profile.preferredLanguage),
-    localizedCopy("home.scanUploading", profile.preferredLanguage),
-    localizedCopy("home.scanFailed", profile.preferredLanguage),
-  ])
+  const copy = await localizedCopyMap(profile.preferredLanguage, [
+    "settings.backHome",
+    "home.scanDialogTitle",
+    "home.scanDialogBody",
+    "home.scanBadge",
+    "home.scanCamera",
+    "home.scanUpload",
+    "home.scanDesktopUpload",
+    "home.scanDesktopHint",
+    "home.scanDropHint",
+    "home.scanDropActive",
+    "home.scanOr",
+    "home.scanUploading",
+    "home.scanFailed",
+  ] as const)
 
   return (
     <main className="min-h-svh bg-background px-6 py-10">
+      <CompletedOnboardingExtras />
       <div className="mx-auto flex max-w-2xl flex-col items-start gap-5 rounded-[2rem] border border-border/80 bg-card/95 p-6 shadow-sm">
         <Link
           href="/"
           className="text-sm font-medium text-muted-foreground transition hover:text-foreground"
         >
-          {backHomeLabel}
+          {copy["settings.backHome"]}
         </Link>
 
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            {scanDialogTitle}
+            {copy["home.scanDialogTitle"]}
           </h1>
           <p className="text-sm leading-6 text-muted-foreground">
-            {scanDialogBody}
+            {copy["home.scanDialogBody"]}
           </p>
         </div>
 
         <ScanUploadDialog
-          badge={scanBadge}
-          body={scanDialogBody}
-          cameraLabel={scanCameraLabel}
-          dropActiveLabel={scanDropActiveLabel}
-          dropHint={scanDropHint}
-          desktopHint={scanDesktopHint}
-          desktopUploadLabel={scanDesktopUploadLabel}
-          failedLabel={scanFailedLabel}
-          mobileUploadLabel={scanUploadLabel}
-          orLabel={scanOrLabel}
-          title={scanDialogTitle}
+          badge={copy["home.scanBadge"]}
+          body={copy["home.scanDialogBody"]}
+          cameraLabel={copy["home.scanCamera"]}
+          dropActiveLabel={copy["home.scanDropActive"]}
+          dropHint={copy["home.scanDropHint"]}
+          desktopHint={copy["home.scanDesktopHint"]}
+          desktopUploadLabel={copy["home.scanDesktopUpload"]}
+          failedLabel={copy["home.scanFailed"]}
+          mobileUploadLabel={copy["home.scanUpload"]}
+          orLabel={copy["home.scanOr"]}
+          title={copy["home.scanDialogTitle"]}
           triggerClassName="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
-          triggerLabel={scanDesktopUploadLabel}
-          uploadingLabel={scanUploadingLabel}
+          triggerLabel={copy["home.scanDesktopUpload"]}
+          uploadingLabel={copy["home.scanUploading"]}
         />
       </div>
     </main>

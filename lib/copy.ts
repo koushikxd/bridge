@@ -1,3 +1,5 @@
+import { cache } from "react"
+
 import en from "@/locales/en.json"
 
 export type MessageKey = keyof typeof en
@@ -18,7 +20,7 @@ export function copy(key: MessageKey): string {
  * Load a locale file dynamically. Returns English as fallback if the
  * target locale file doesn't exist (translation not generated yet).
  */
-async function loadLocale(locale: string): Promise<Messages> {
+const loadLocale = cache(async (locale: string): Promise<Messages> => {
   if (localeCache[locale]) return localeCache[locale]
 
   try {
@@ -31,7 +33,7 @@ async function loadLocale(locale: string): Promise<Messages> {
     // Locale file doesn't exist yet; fall back to English
     return en
   }
-}
+})
 
 /**
  * Locale-aware copy helper. Loads the requested locale and returns
@@ -46,4 +48,15 @@ export async function localizedCopy(
 ): Promise<string> {
   const messages = await loadLocale(locale)
   return messages[key] ?? en[key]
+}
+
+export async function localizedCopyMap<const Keys extends readonly MessageKey[]>(
+  locale: string,
+  keys: Keys
+): Promise<Record<Keys[number], string>> {
+  const messages = await loadLocale(locale)
+
+  return Object.fromEntries(
+    keys.map((key) => [key, messages[key] ?? en[key]])
+  ) as Record<Keys[number], string>
 }

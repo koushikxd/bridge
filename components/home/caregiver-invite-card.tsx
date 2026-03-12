@@ -2,7 +2,7 @@
 
 import { IconCopy } from "@tabler/icons-react"
 import { useMutation } from "convex/react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
@@ -23,6 +23,15 @@ export function CaregiverInviteCard({
   const createCaregiverInvite = useMutation(api.profiles.createCaregiverInvite)
   const [copied, setCopied] = useState(false)
   const [isPending, setIsPending] = useState(false)
+  const resetCopiedTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (resetCopiedTimeoutRef.current !== null) {
+        window.clearTimeout(resetCopiedTimeoutRef.current)
+      }
+    }
+  }, [])
 
   async function handleCopy() {
     setIsPending(true)
@@ -35,7 +44,13 @@ export function CaregiverInviteCard({
       ).toString()
       await navigator.clipboard.writeText(joinUrl)
       setCopied(true)
-      window.setTimeout(() => setCopied(false), 2000)
+      if (resetCopiedTimeoutRef.current !== null) {
+        window.clearTimeout(resetCopiedTimeoutRef.current)
+      }
+      resetCopiedTimeoutRef.current = window.setTimeout(() => {
+        setCopied(false)
+        resetCopiedTimeoutRef.current = null
+      }, 2000)
     } finally {
       setIsPending(false)
     }

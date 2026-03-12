@@ -32,10 +32,10 @@ export function DoseActions({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+    <div className="flex flex-wrap gap-2 lg:justify-end">
       <Button
         size="lg"
-        className="w-full justify-center"
+        className="min-w-28 justify-center"
         onClick={() => save("taken")}
         disabled={disabled}
       >
@@ -45,7 +45,7 @@ export function DoseActions({
       <Button
         size="lg"
         variant="outline"
-        className="w-full justify-center"
+        className="min-w-28 justify-center"
         onClick={() => save("snoozed")}
         disabled={disabled}
       >
@@ -55,7 +55,7 @@ export function DoseActions({
       <Button
         size="lg"
         variant="ghost"
-        className="w-full justify-center"
+        className="min-w-24 justify-center"
         onClick={() => save("skipped")}
         disabled={disabled}
       >

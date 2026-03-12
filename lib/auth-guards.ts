@@ -1,9 +1,10 @@
+import { cache } from "react"
 import { redirect } from "next/navigation"
 
 import { api } from "@/convex/_generated/api"
 import { fetchAuthQuery, isAuthenticated } from "@/lib/auth-server"
 
-export async function getOptionalSessionState() {
+export const getOptionalSessionState = cache(async function getOptionalSessionState() {
   const authenticated = await isAuthenticated()
 
   if (!authenticated) {
@@ -20,9 +21,9 @@ export async function getOptionalSessionState() {
   } catch {
     return null
   }
-}
+})
 
-export async function getSessionContext() {
+export const getSessionContext = cache(async function getSessionContext() {
   const state = await getOptionalSessionState()
 
   if (!state) {
@@ -46,7 +47,7 @@ export async function getSessionContext() {
       linkedProfileIds: [],
     }
   }
-}
+})
 
 export async function redirectAuthenticatedUser() {
   const state = await getSessionContext()

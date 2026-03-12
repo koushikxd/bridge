@@ -3,11 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   IconArrowRight,
+  IconEye,
+  IconEyeOff,
   IconLock,
   IconMail,
   IconUser,
 } from "@tabler/icons-react"
-import type { ReactNode } from "react"
+import type { InputHTMLAttributes, ReactNode } from "react"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 
@@ -29,6 +31,9 @@ export function AuthCard() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
   const [hasInvite, setHasInvite] = useState(false)
+  const [showSignInPassword, setShowSignInPassword] = useState(false)
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const callbackURL = hasInvite ? "/invite/resolve" : "/auth"
 
@@ -77,7 +82,9 @@ export function AuthCard() {
       })
 
       if (result.error) {
-        setErrorMessage(result.error.message ?? "Unable to sign in right now.")
+        setErrorMessage(
+          resolveAuthErrorMessage(result.error.message, "signIn")
+        )
         return
       }
 
@@ -100,9 +107,7 @@ export function AuthCard() {
       })
 
       if (result.error) {
-        setErrorMessage(
-          result.error.message ?? "Unable to create your account right now."
-        )
+        setErrorMessage(resolveAuthErrorMessage(result.error.message, "signUp"))
         return
       }
 
@@ -169,12 +174,14 @@ export function AuthCard() {
             label={copy("auth.password")}
             error={signInForm.formState.errors.password?.message}
           >
-            <input
+            <PasswordInput
               id="signIn-password"
-              type="password"
               autoComplete="current-password"
               placeholder="Your password"
-              className={inputClassName}
+              visible={showSignInPassword}
+              onToggleVisibility={() =>
+                setShowSignInPassword((current) => !current)
+              }
               {...signInForm.register("password")}
             />
           </Field>
@@ -230,12 +237,14 @@ export function AuthCard() {
             label={copy("auth.password")}
             error={signUpForm.formState.errors.password?.message}
           >
-            <input
+            <PasswordInput
               id="signUp-password"
-              type="password"
               autoComplete="new-password"
               placeholder="Create a password"
-              className={inputClassName}
+              visible={showSignUpPassword}
+              onToggleVisibility={() =>
+                setShowSignUpPassword((current) => !current)
+              }
               {...signUpForm.register("password")}
             />
           </Field>
@@ -245,12 +254,14 @@ export function AuthCard() {
             label={copy("auth.confirmPassword")}
             error={signUpForm.formState.errors.confirmPassword?.message}
           >
-            <input
+            <PasswordInput
               id="signUp-confirmPassword"
-              type="password"
               autoComplete="new-password"
               placeholder="Confirm your password"
-              className={inputClassName}
+              visible={showConfirmPassword}
+              onToggleVisibility={() =>
+                setShowConfirmPassword((current) => !current)
+              }
               {...signUpForm.register("confirmPassword")}
             />
           </Field>
@@ -272,6 +283,27 @@ export function AuthCard() {
       )}
     </div>
   )
+}
+
+function resolveAuthErrorMessage(
+  message: string | undefined,
+  mode: AuthMode
+) {
+  switch (message) {
+    case "Invalid email or password":
+      return copy("auth.errorInvalidCredentials")
+    case "Invalid email":
+      return copy("auth.errorInvalidEmail")
+    case "Invalid password":
+      return copy("auth.errorInvalidPassword")
+    case "User already exists.":
+    case "User already exists. Use another email.":
+      return copy("auth.errorUserExists")
+    default:
+      return copy(
+        mode === "signIn" ? "auth.errorGenericSignIn" : "auth.errorGenericSignUp"
+      )
+  }
 }
 
 function ModeButton({
@@ -323,6 +355,36 @@ function Field({
       </label>
       {children}
       {error && <p className="text-xs text-destructive">{error}</p>}
+    </div>
+  )
+}
+
+function PasswordInput({
+  visible,
+  onToggleVisibility,
+  ...props
+}: InputHTMLAttributes<HTMLInputElement> & {
+  visible: boolean
+  onToggleVisibility: () => void
+}) {
+  const toggleLabel = copy(visible ? "auth.hidePassword" : "auth.showPassword")
+
+  return (
+    <div className="relative">
+      <input
+        {...props}
+        type={visible ? "text" : "password"}
+        className={cn(inputClassName, "pr-24")}
+      />
+      <button
+        type="button"
+        onClick={onToggleVisibility}
+        className="absolute top-1/2 right-3 inline-flex -translate-y-1/2 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        aria-label={toggleLabel}
+      >
+        {visible ? <IconEyeOff className="size-3.5" /> : <IconEye className="size-3.5" />}
+        <span>{toggleLabel}</span>
+      </button>
     </div>
   )
 }

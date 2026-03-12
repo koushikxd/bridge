@@ -36,6 +36,12 @@ export function LocalReminderManager() {
   )
   const firedEventIdsRef = useRef<Set<string>>(new Set())
   const browserTimeZone = useMemo(() => getBrowserTimeZone(), [])
+  const remindersEnabled = homeData?.reminderPreferences.enabled ?? false
+  const canPoll =
+    remindersEnabled &&
+    permission === "granted" &&
+    typeof document !== "undefined" &&
+    document.visibilityState === "visible"
 
   useEffect(() => {
     let cancelled = false
@@ -57,19 +63,51 @@ export function LocalReminderManager() {
     }
 
     void loadHomeData()
-    const refreshId = window.setInterval(() => {
-      void loadHomeData()
-    }, CHECK_INTERVAL_MS)
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void loadHomeData()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
     return () => {
       cancelled = true
-      window.clearInterval(refreshId)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
   }, [])
 
   useEffect(() => {
+    if (!canPoll) {
+      return
+    }
+
+    const refreshId = window.setInterval(() => {
+      void fetch("/api/reminders/local", { cache: "no-store" })
+        .then((response) => {
+          if (!response.ok) {
+            return null
+          }
+
+          return response.json() as Promise<ReminderHomeData>
+        })
+        .then((payload) => {
+          if (payload) {
+            setHomeData(payload)
+          }
+        })
+        .catch(() => undefined)
+    }, CHECK_INTERVAL_MS)
+
+    return () => {
+      window.clearInterval(refreshId)
+    }
+  }, [canPoll])
+
+  useEffect(() => {
     if (
-      !homeData?.reminderPreferences.enabled ||
+      !remindersEnabled ||
       !("Notification" in window) ||
       Notification.permission !== "default"
     ) {
@@ -91,15 +129,16 @@ export function LocalReminderManager() {
     return () => {
       cancelled = true
     }
-  }, [homeData?.reminderPreferences.enabled])
+  }, [remindersEnabled])
 
   useEffect(() => {
     if (
       !homeData ||
-      !homeData.reminderPreferences.enabled ||
+      !remindersEnabled ||
       !("Notification" in window) ||
       permission !== "granted" ||
-      !("serviceWorker" in navigator)
+      !("serviceWorker" in navigator) ||
+      document.visibilityState !== "visible"
     ) {
       return
     }
@@ -154,7 +193,7 @@ export function LocalReminderManager() {
     return () => {
       cancelled = true
     }
-  }, [browserTimeZone, homeData, permission])
+  }, [browserTimeZone, homeData, permission, remindersEnabled])
 
   return null
 }

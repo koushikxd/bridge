@@ -30,11 +30,38 @@ export async function requireCurrentProfile(ctx: ProfileCtx): Promise<{
 }
 
 export async function getAuthUserRecord(ctx: ProfileCtx, userId: string) {
-  return await ctx.db.get(userId as Id<"user">)
+  const directRecord = await ctx.db.get(userId as Id<"user">)
+
+  if (directRecord) {
+    return directRecord
+  }
+
+  return await ctx.db
+    .query("user")
+    .withIndex("userId", (q) => q.eq("userId", userId))
+    .unique()
+}
+
+function formatEmailLocalPart(email: string) {
+  const [localPart] = email.trim().split("@")
+
+  if (!localPart) {
+    return email.trim()
+  }
+
+  const readableName = localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ")
+
+  return readableName || localPart
 }
 
 export function getUserDisplayName(args: {
   name?: string | null
+  username?: string | null
+  displayUsername?: string | null
   email?: string | null
   fallback?: string
 }) {
@@ -44,10 +71,22 @@ export function getUserDisplayName(args: {
     return trimmedName
   }
 
+  const trimmedDisplayUsername = args.displayUsername?.trim()
+
+  if (trimmedDisplayUsername) {
+    return trimmedDisplayUsername
+  }
+
+  const trimmedUsername = args.username?.trim()
+
+  if (trimmedUsername) {
+    return trimmedUsername
+  }
+
   const trimmedEmail = args.email?.trim()
 
   if (trimmedEmail) {
-    return trimmedEmail
+    return formatEmailLocalPart(trimmedEmail)
   }
 
   return args.fallback ?? "Bridge member"
@@ -84,6 +123,49 @@ export async function getActiveCaregiverLink(
   )
 }
 
+export async function getActiveConnectionBetweenUsers(
+  ctx: ProfileCtx,
+  args: {
+    userId: string
+    connectedUserId: string
+  }
+) {
+  const [userProfile, connectedProfile] = await Promise.all([
+    getProfileForUserId(ctx, args.userId),
+    getProfileForUserId(ctx, args.connectedUserId),
+  ])
+
+  if (connectedProfile) {
+    const asInvitedUser = await getActiveCaregiverLink(ctx, {
+      patientProfileId: connectedProfile._id,
+      caregiverUserId: args.userId,
+    })
+
+    if (asInvitedUser) {
+      return {
+        link: asInvitedUser,
+        targetProfile: connectedProfile,
+      }
+    }
+  }
+
+  if (userProfile) {
+    const asProfileOwner = await getActiveCaregiverLink(ctx, {
+      patientProfileId: userProfile._id,
+      caregiverUserId: args.connectedUserId,
+    })
+
+    if (asProfileOwner && connectedProfile) {
+      return {
+        link: asProfileOwner,
+        targetProfile: connectedProfile,
+      }
+    }
+  }
+
+  return null
+}
+
 export async function ensureCanAccessProfile(
   ctx: ProfileCtx,
   targetProfileId: Id<"profiles">
@@ -105,19 +187,19 @@ export async function ensureCanAccessProfile(
     }
   }
 
-  const caregiverLink = await getActiveCaregiverLink(ctx, {
-    patientProfileId: profile._id,
-    caregiverUserId: user._id,
+  const connection = await getActiveConnectionBetweenUsers(ctx, {
+    userId: user._id,
+    connectedUserId: profile.userId,
   })
 
-  if (!caregiverLink) {
+  if (!connection) {
     throw new Error("You do not have access to this profile.")
   }
 
   return {
     userId: user._id,
     profile,
-    access: "caregiver" as const,
-    caregiverLink,
+    access: "connected" as const,
+    caregiverLink: connection.link,
   }
 }

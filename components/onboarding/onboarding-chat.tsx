@@ -79,7 +79,7 @@ export function OnboardingChat({
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     })
-  })
+  }, [messages])
 
   // Focus input when AI finishes responding
   useEffect(() => {

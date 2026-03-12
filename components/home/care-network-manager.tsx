@@ -17,9 +17,9 @@ type CareNetworkConnection = {
   profileId: string | null
   name: string
   email: string | null
-  direction: "inbound" | "outbound"
   canOpenProfile: boolean
-  activeMedicines: number | null
+  activeMedicines: number
+  onboardingCompleted: boolean
 }
 
 export function CareNetworkManager({
@@ -38,8 +38,8 @@ export function CareNetworkManager({
   emptyBody: string
   activeMedicinesLabel: string
   connectionLabels: {
-    inbound: string
-    outbound: string
+    available: string
+    pending: string
     viewProfile: string
     remove: string
   }
@@ -71,8 +71,8 @@ export function CareNetworkManager({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-[1.5rem] border border-border/70 bg-background/75 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-3 rounded-[1.25rem] border border-border/70 bg-background/75 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <p className="text-sm font-semibold text-foreground">
             {inviteUiText.title}
@@ -94,40 +94,35 @@ export function CareNetworkManager({
       </div>
 
       {connections.length === 0 ? (
-        <div className="rounded-[1.5rem] border border-dashed border-border/70 bg-background/45 px-4 py-5 sm:px-5">
+        <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-background/45 px-4 py-4">
           <p className="text-sm font-semibold text-foreground">{emptyTitle}</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             {emptyBody}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {connections.map((connection) => {
-            const relationshipLabel =
-              connection.direction === "inbound"
-                ? connectionLabels.inbound
-                : connectionLabels.outbound
-            const subtitle = connection.email ?? relationshipLabel
-            const helperText =
-              connection.direction === "outbound" &&
-              connection.activeMedicines !== null
-                ? `${relationshipLabel} · ${connection.activeMedicines} ${activeMedicinesLabel}`
-                : relationshipLabel
+            const helperText = connection.onboardingCompleted
+              ? `${connectionLabels.available} · ${connection.activeMedicines} ${activeMedicinesLabel}`
+              : connectionLabels.pending
 
             return (
               <article
                 key={connection.linkId}
-                className="rounded-[1.5rem] border border-border/70 bg-background/80 p-4"
+                className="rounded-[1.25rem] border border-border/70 bg-background/80 p-3"
               >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-foreground">
+                    <p className="truncate text-[0.98rem] font-semibold text-foreground">
                       {connection.name}
                     </p>
-                    <p className="mt-1 truncate text-sm text-muted-foreground">
-                      {subtitle}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
+                    {connection.email ? (
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        {connection.email}
+                      </p>
+                    ) : null}
+                    <p className="mt-1.5 text-sm text-muted-foreground">
                       {helperText}
                     </p>
                   </div>

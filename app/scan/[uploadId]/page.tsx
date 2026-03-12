@@ -3,6 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
+import { CompletedOnboardingExtras } from "@/components/app-shell/completed-onboarding-extras"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import { ScanProcessor } from "@/components/upload/scan-processor"
@@ -10,7 +11,7 @@ import { api } from "@/convex/_generated/api"
 import type { Id } from "@/convex/_generated/dataModel"
 import { requireAuthenticatedUser } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
-import { localizedCopy } from "@/lib/copy"
+import { localizedCopyMap } from "@/lib/copy"
 
 export const metadata = {
   title: "Scan Result | Bridge",
@@ -83,79 +84,79 @@ export default async function ScanResultPage({
 
   const lang = result.profile.preferredLanguage
 
-  const [
-    backHomeLabel,
-    imageLabel,
-    resultLabel,
-    processingLabel,
-    previewUnavailableLabel,
-    safetyStatusLabel,
-    whyLabel,
-    nextLabel,
-    confidenceLabel,
-    pendingLabel,
-    ocrConfidenceLabel,
-    reviewingLabel,
-    retryLabel,
-    safeStatus,
-    cautionStatus,
-    riskyStatus,
-    unknownStatus,
-    uploadedStatus,
-    processingStatus,
-    processedStatus,
-    failedStatus,
-    ingredientsLabel,
-    allergensLabel,
-    nutritionLabel,
-    medicinesLabel,
-    dosageLabel,
-    purposeLabel,
-    instructionsLabel,
-    flaggedAllergensLabel,
-    flaggedIngredientsLabel,
-    profileMatchesLabel,
-    retryButtonLabel,
-    retryingLabel,
-    scanMoreLabel,
-    processingHintLabel,
-  ] = await Promise.all([
-    localizedCopy("settings.backHome", lang),
-    localizedCopy("scan.image", lang),
-    localizedCopy("scan.result", lang),
-    localizedCopy("scan.processing", lang),
-    localizedCopy("scan.previewUnavailable", lang),
-    localizedCopy("scan.safetyStatus", lang),
-    localizedCopy("scan.why", lang),
-    localizedCopy("scan.next", lang),
-    localizedCopy("scan.confidence", lang),
-    localizedCopy("scan.pending", lang),
-    localizedCopy("scan.ocrConfidence", lang),
-    localizedCopy("scan.reviewing", lang),
-    localizedCopy("scan.retry", lang),
-    localizedCopy("scan.status.safe", lang),
-    localizedCopy("scan.status.caution", lang),
-    localizedCopy("scan.status.risky", lang),
-    localizedCopy("scan.status.unknown", lang),
-    localizedCopy("scan.status.uploaded", lang),
-    localizedCopy("scan.status.processing", lang),
-    localizedCopy("scan.status.processed", lang),
-    localizedCopy("scan.status.failed", lang),
-    localizedCopy("scan.ingredients", lang),
-    localizedCopy("scan.allergens", lang),
-    localizedCopy("scan.nutrition", lang),
-    localizedCopy("scan.medicines", lang),
-    localizedCopy("scan.dosage", lang),
-    localizedCopy("scan.purpose", lang),
-    localizedCopy("scan.instructions", lang),
-    localizedCopy("scan.flaggedAllergens", lang),
-    localizedCopy("scan.flaggedIngredients", lang),
-    localizedCopy("scan.profileMatches", lang),
-    localizedCopy("scan.retryButton", lang),
-    localizedCopy("scan.retrying", lang),
-    localizedCopy("scan.scanMore", lang),
-    localizedCopy("scan.processingHint", lang),
-  ])
+  const copy = await localizedCopyMap(lang, [
+    "settings.backHome",
+    "scan.image",
+    "scan.result",
+    "scan.processing",
+    "scan.previewUnavailable",
+    "scan.safetyStatus",
+    "scan.why",
+    "scan.next",
+    "scan.confidence",
+    "scan.pending",
+    "scan.ocrConfidence",
+    "scan.reviewing",
+    "scan.retry",
+    "scan.status.safe",
+    "scan.status.caution",
+    "scan.status.risky",
+    "scan.status.unknown",
+    "scan.status.uploaded",
+    "scan.status.processing",
+    "scan.status.processed",
+    "scan.status.failed",
+    "scan.ingredients",
+    "scan.allergens",
+    "scan.nutrition",
+    "scan.medicines",
+    "scan.dosage",
+    "scan.purpose",
+    "scan.instructions",
+    "scan.flaggedAllergens",
+    "scan.flaggedIngredients",
+    "scan.profileMatches",
+    "scan.retryButton",
+    "scan.retrying",
+    "scan.scanMore",
+    "scan.processingHint",
+  ] as const)
+
+  const backHomeLabel = copy["settings.backHome"]
+  const imageLabel = copy["scan.image"]
+  const resultLabel = copy["scan.result"]
+  const processingLabel = copy["scan.processing"]
+  const previewUnavailableLabel = copy["scan.previewUnavailable"]
+  const safetyStatusLabel = copy["scan.safetyStatus"]
+  const whyLabel = copy["scan.why"]
+  const nextLabel = copy["scan.next"]
+  const confidenceLabel = copy["scan.confidence"]
+  const pendingLabel = copy["scan.pending"]
+  const ocrConfidenceLabel = copy["scan.ocrConfidence"]
+  const reviewingLabel = copy["scan.reviewing"]
+  const retryLabel = copy["scan.retry"]
+  const safeStatus = copy["scan.status.safe"]
+  const cautionStatus = copy["scan.status.caution"]
+  const riskyStatus = copy["scan.status.risky"]
+  const unknownStatus = copy["scan.status.unknown"]
+  const uploadedStatus = copy["scan.status.uploaded"]
+  const processingStatus = copy["scan.status.processing"]
+  const processedStatus = copy["scan.status.processed"]
+  const failedStatus = copy["scan.status.failed"]
+  const ingredientsLabel = copy["scan.ingredients"]
+  const allergensLabel = copy["scan.allergens"]
+  const nutritionLabel = copy["scan.nutrition"]
+  const medicinesLabel = copy["scan.medicines"]
+  const dosageLabel = copy["scan.dosage"]
+  const purposeLabel = copy["scan.purpose"]
+  const instructionsLabel = copy["scan.instructions"]
+  const flaggedAllergensLabel = copy["scan.flaggedAllergens"]
+  const flaggedIngredientsLabel = copy["scan.flaggedIngredients"]
+  const profileMatchesLabel = copy["scan.profileMatches"]
+  const retryButtonLabel = copy["scan.retryButton"]
+  const retryingLabel = copy["scan.retrying"]
+  const scanMoreLabel = copy["scan.scanMore"]
+  const processingHintLabel = copy["scan.processingHint"]
 
   const statusLabels: Record<string, string> = {
     caution: cautionStatus,
@@ -196,6 +197,7 @@ export default async function ScanResultPage({
 
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_10%,transparent),transparent_34%),linear-gradient(to_bottom,_color-mix(in_oklch,var(--muted)_42%,transparent),transparent_24%)] px-4 py-5 sm:px-6 sm:py-8">
+      <CompletedOnboardingExtras />
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center gap-3">
           <Link

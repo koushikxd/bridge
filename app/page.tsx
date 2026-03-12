@@ -1,28 +1,24 @@
 import {
   IconActivityHeartbeat,
   IconClockHour4,
-  IconLanguage,
   IconPill,
   IconShieldCheck,
   IconUsers,
 } from "@tabler/icons-react"
 import Link from "next/link"
 
-import { SignOutButton } from "@/components/auth/sign-out-button"
 import { ClearInviteCookie } from "@/components/auth/clear-invite-cookie"
+import { CompletedOnboardingExtras } from "@/components/app-shell/completed-onboarding-extras"
 import { CareNetworkManager } from "@/components/home/care-network-manager"
 import { DoseActions } from "@/components/home/dose-actions"
 import { ProgressChart } from "@/components/home/progress-chart"
 import { RecentScanItem } from "@/components/home/recent-scan-item"
 import { ScanUploadDialog } from "@/components/upload/scan-upload-dialog"
 import { api } from "@/convex/_generated/api"
-import { getSessionContext, requireAuthenticatedUser } from "@/lib/auth-guards"
+import { requireAuthenticatedUser } from "@/lib/auth-guards"
 import { fetchAuthQuery } from "@/lib/auth-server"
-import { localizedCopy } from "@/lib/copy"
-import {
-  preferredLanguageLabels,
-  type PreferredLanguage,
-} from "@/lib/contracts/profile"
+import { localizedCopyMap } from "@/lib/copy"
+import { type PreferredLanguage } from "@/lib/contracts/profile"
 import { formatTimestampInTimeZone } from "@/lib/time"
 
 export const metadata = {
@@ -31,185 +27,175 @@ export const metadata = {
 }
 
 export default async function Page() {
-  const { authUser } = await requireAuthenticatedUser()
-  const session = await getSessionContext()
+  const session = await requireAuthenticatedUser()
 
-  if (!session) {
-    return null
-  }
-
+  const { authUser } = session
   const profile = session.profile
   const locale = (profile?.preferredLanguage ?? "en") as PreferredLanguage
-  const linkedProfiles = await fetchAuthQuery(api.profiles.getLinkedProfiles, {})
-  const homeData = profile?.onboardingCompleted
-    ? await fetchAuthQuery(api.medications.getHomeData, {})
-    : null
-
-  const [
-    homeEyebrow,
-    homeTitle,
-    homeBody,
-    homeStatus,
-    todayLabel,
-    adherenceScoreLabel,
-    activeMedicinesLabel,
-    beingTrackedLabel,
-    nextDoseLabel,
-    noneLabel,
-    nothingPendingLabel,
-    quickSupportLabel,
-    quickScanTitle,
-    quickScanBody,
-    openScannerLabel,
-    openSettingsLabel,
-    signedInLabel,
-    signedInHint,
-    medicineTrackingLabel,
-    todayDosesLabel,
-    todayDosesBody,
-    completedLabel,
-    noDosesLabel,
-    doseMissingLabel,
-    dueLabel,
-    dailyProgressLabel,
-    last7DaysLabel,
-    recentScansLabel,
-    recentScansBody,
-    noScansLabel,
-    viewLabel,
-    signOutLabel,
-    signingOutLabel,
-    takenActionLabel,
-    snoozeActionLabel,
-    skipActionLabel,
-    scanDialogTitle,
-    scanDialogBody,
-    scanBadge,
-    scanCameraLabel,
-    scanUploadLabel,
-    scanDesktopUploadLabel,
-    scanDesktopHint,
-    scanDropHint,
-    scanDropActiveLabel,
-    scanOrLabel,
-    scanUploadingLabel,
-    scanFailedLabel,
-    onboardingPromptLabel,
-    onboardingActionLabel,
-    onboardingStatusLabel,
-    linkedPeopleLabel,
-    linkedProfilesEmptyTitleLabel,
-    linkedProfilesEmptyBodyLabel,
-    linkedProfilesIncompleteBodyLabel,
-    linkedProfilesActiveMedicinesLabel,
-    progressEmptyLabel,
-    dosesSetupPromptLabel,
-    scansSetupPromptLabel,
-    caregiverAccessTitle,
-    caregiverAccessBody,
-    caregiverAccessCopy,
-    caregiverAccessCopied,
-    caregiverAccessCreating,
-    careNetworkInboundLabel,
-    careNetworkOutboundLabel,
-    careNetworkViewProfileLabel,
-    careNetworkRemoveLabel,
-    careNetworkTitleLabel,
-    careNetworkBodyLabel,
-    utilityTitleLabel,
-  ] = await Promise.all([
-    localizedCopy("home.eyebrow", locale),
-    localizedCopy("home.title", locale),
-    localizedCopy("home.body", locale),
-    localizedCopy("home.status", locale),
-    localizedCopy("home.today", locale),
-    localizedCopy("home.adherenceScore", locale),
-    localizedCopy("home.activeMedicines", locale),
-    localizedCopy("home.beingTracked", locale),
-    localizedCopy("home.nextDose", locale),
-    localizedCopy("home.none", locale),
-    localizedCopy("home.nothingPending", locale),
-    localizedCopy("home.quickSupport", locale),
-    localizedCopy("home.quickScanTitle", locale),
-    localizedCopy("home.quickScanBody", locale),
-    localizedCopy("home.openScanner", locale),
-    localizedCopy("home.openSettings", locale),
-    localizedCopy("home.signedIn", locale),
-    localizedCopy("home.signedInHint", locale),
-    localizedCopy("home.medicineTracking", locale),
-    localizedCopy("home.todayDoses", locale),
-    localizedCopy("home.todayDosesBody", locale),
-    localizedCopy("home.completed", locale),
-    localizedCopy("home.noDoses", locale),
-    localizedCopy("home.doseMissing", locale),
-    localizedCopy("home.due", locale),
-    localizedCopy("home.dailyProgress", locale),
-    localizedCopy("home.last7Days", locale),
-    localizedCopy("home.recentScans", locale),
-    localizedCopy("home.recentScansBody", locale),
-    localizedCopy("home.noScans", locale),
-    localizedCopy("home.view", locale),
-    localizedCopy("home.signOut", locale),
-    localizedCopy("home.signingOut", locale),
-    localizedCopy("home.actionTaken", locale),
-    localizedCopy("home.actionSnooze", locale),
-    localizedCopy("home.actionSkip", locale),
-    localizedCopy("home.scanDialogTitle", locale),
-    localizedCopy("home.scanDialogBody", locale),
-    localizedCopy("home.scanBadge", locale),
-    localizedCopy("home.scanCamera", locale),
-    localizedCopy("home.scanUpload", locale),
-    localizedCopy("home.scanDesktopUpload", locale),
-    localizedCopy("home.scanDesktopHint", locale),
-    localizedCopy("home.scanDropHint", locale),
-    localizedCopy("home.scanDropActive", locale),
-    localizedCopy("home.scanOr", locale),
-    localizedCopy("home.scanUploading", locale),
-    localizedCopy("home.scanFailed", locale),
-    localizedCopy("home.onboardingPrompt", locale),
-    localizedCopy("home.onboardingAction", locale),
-    localizedCopy("home.onboardingStatus", locale),
-    localizedCopy("home.linkedPeople", locale),
-    localizedCopy("home.linkedProfilesEmptyTitle", locale),
-    localizedCopy("home.linkedProfilesEmptyBody", locale),
-    localizedCopy("home.linkedProfilesIncompleteBody", locale),
-    localizedCopy("home.linkedProfilesActiveMedicines", locale),
-    localizedCopy("home.progressEmpty", locale),
-    localizedCopy("home.dosesSetupPrompt", locale),
-    localizedCopy("home.scansSetupPrompt", locale),
-    localizedCopy("home.caregiverAccessTitle", locale),
-    localizedCopy("home.caregiverAccessBody", locale),
-    localizedCopy("home.caregiverAccessCopy", locale),
-    localizedCopy("home.caregiverAccessCopied", locale),
-    localizedCopy("home.caregiverAccessCreating", locale),
-    localizedCopy("home.careNetworkInbound", locale),
-    localizedCopy("home.careNetworkOutbound", locale),
-    localizedCopy("home.careNetworkViewProfile", locale),
-    localizedCopy("home.careNetworkRemove", locale),
-    localizedCopy("home.careNetworkTitle", locale),
-    localizedCopy("home.careNetworkBody", locale),
-    localizedCopy("home.utilityTitle", locale),
+  const [linkedProfiles, homeData, copy] = await Promise.all([
+    fetchAuthQuery(api.profiles.getLinkedProfiles, {}),
+    profile?.onboardingCompleted
+      ? fetchAuthQuery(api.medications.getHomeData, {})
+      : Promise.resolve(null),
+    localizedCopyMap(locale, [
+      "home.eyebrow",
+      "home.title",
+      "home.body",
+      "home.today",
+      "home.adherenceScore",
+      "home.activeMedicines",
+      "home.beingTracked",
+      "home.nextDose",
+      "home.none",
+      "home.nothingPending",
+      "home.quickSupport",
+      "home.quickScanTitle",
+      "home.quickScanBody",
+      "home.openScanner",
+      "home.openSettings",
+      "home.medicineTracking",
+      "home.todayDoses",
+      "home.todayDosesBody",
+      "home.completed",
+      "home.noDoses",
+      "home.doseMissing",
+      "home.due",
+      "home.dailyProgress",
+      "home.last7Days",
+      "home.recentScans",
+      "home.recentScansBody",
+      "home.noScans",
+      "home.view",
+      "home.actionTaken",
+      "home.actionSnooze",
+      "home.actionSkip",
+      "home.scanDialogTitle",
+      "home.scanDialogBody",
+      "home.scanBadge",
+      "home.scanCamera",
+      "home.scanUpload",
+      "home.scanDesktopUpload",
+      "home.scanDesktopHint",
+      "home.scanDropHint",
+      "home.scanDropActive",
+      "home.scanOr",
+      "home.scanUploading",
+      "home.scanFailed",
+      "home.onboardingPrompt",
+      "home.onboardingAction",
+      "home.linkedPeople",
+      "home.linkedProfilesEmptyTitle",
+      "home.linkedProfilesEmptyBody",
+      "home.linkedProfilesIncompleteBody",
+      "home.linkedProfilesActiveMedicines",
+      "home.progressEmpty",
+      "home.dosesSetupPrompt",
+      "home.scansSetupPrompt",
+      "home.caregiverAccessTitle",
+      "home.caregiverAccessBody",
+      "home.caregiverAccessCopy",
+      "home.caregiverAccessCopied",
+      "home.caregiverAccessCreating",
+      "home.careNetworkAvailable",
+      "home.careNetworkPending",
+      "home.careNetworkViewProfile",
+      "home.careNetworkRemove",
+      "home.careNetworkTitle",
+      "home.careNetworkBody",
+      "home.event.missed",
+      "home.event.reminded",
+      "home.event.scheduled",
+      "home.event.skipped",
+      "home.event.snoozed",
+      "home.event.taken",
+    ] as const),
   ])
 
+  const homeEyebrow = copy["home.eyebrow"]
+  const homeTitle = copy["home.title"]
+  const homeBody = copy["home.body"]
+  const todayLabel = copy["home.today"]
+  const adherenceScoreLabel = copy["home.adherenceScore"]
+  const activeMedicinesLabel = copy["home.activeMedicines"]
+  const beingTrackedLabel = copy["home.beingTracked"]
+  const nextDoseLabel = copy["home.nextDose"]
+  const noneLabel = copy["home.none"]
+  const nothingPendingLabel = copy["home.nothingPending"]
+  const quickSupportLabel = copy["home.quickSupport"]
+  const quickScanTitle = copy["home.quickScanTitle"]
+  const quickScanBody = copy["home.quickScanBody"]
+  const openScannerLabel = copy["home.openScanner"]
+  const openSettingsLabel = copy["home.openSettings"]
+  const medicineTrackingLabel = copy["home.medicineTracking"]
+  const todayDosesLabel = copy["home.todayDoses"]
+  const todayDosesBody = copy["home.todayDosesBody"]
+  const completedLabel = copy["home.completed"]
+  const noDosesLabel = copy["home.noDoses"]
+  const doseMissingLabel = copy["home.doseMissing"]
+  const dueLabel = copy["home.due"]
+  const dailyProgressLabel = copy["home.dailyProgress"]
+  const last7DaysLabel = copy["home.last7Days"]
+  const recentScansLabel = copy["home.recentScans"]
+  const recentScansBody = copy["home.recentScansBody"]
+  const noScansLabel = copy["home.noScans"]
+  const viewLabel = copy["home.view"]
+  const takenActionLabel = copy["home.actionTaken"]
+  const snoozeActionLabel = copy["home.actionSnooze"]
+  const skipActionLabel = copy["home.actionSkip"]
+  const scanDialogTitle = copy["home.scanDialogTitle"]
+  const scanDialogBody = copy["home.scanDialogBody"]
+  const scanBadge = copy["home.scanBadge"]
+  const scanCameraLabel = copy["home.scanCamera"]
+  const scanUploadLabel = copy["home.scanUpload"]
+  const scanDesktopUploadLabel = copy["home.scanDesktopUpload"]
+  const scanDesktopHint = copy["home.scanDesktopHint"]
+  const scanDropHint = copy["home.scanDropHint"]
+  const scanDropActiveLabel = copy["home.scanDropActive"]
+  const scanOrLabel = copy["home.scanOr"]
+  const scanUploadingLabel = copy["home.scanUploading"]
+  const scanFailedLabel = copy["home.scanFailed"]
+  const onboardingPromptLabel = copy["home.onboardingPrompt"]
+  const onboardingActionLabel = copy["home.onboardingAction"]
+  const linkedPeopleLabel = copy["home.linkedPeople"]
+  const linkedProfilesEmptyTitleLabel = copy["home.linkedProfilesEmptyTitle"]
+  const linkedProfilesEmptyBodyLabel = copy["home.linkedProfilesEmptyBody"]
+  const linkedProfilesIncompleteBodyLabel =
+    copy["home.linkedProfilesIncompleteBody"]
+  const linkedProfilesActiveMedicinesLabel =
+    copy["home.linkedProfilesActiveMedicines"]
+  const progressEmptyLabel = copy["home.progressEmpty"]
+  const dosesSetupPromptLabel = copy["home.dosesSetupPrompt"]
+  const scansSetupPromptLabel = copy["home.scansSetupPrompt"]
+  const caregiverAccessTitle = copy["home.caregiverAccessTitle"]
+  const caregiverAccessBody = copy["home.caregiverAccessBody"]
+  const caregiverAccessCopy = copy["home.caregiverAccessCopy"]
+  const caregiverAccessCopied = copy["home.caregiverAccessCopied"]
+  const caregiverAccessCreating = copy["home.caregiverAccessCreating"]
+  const careNetworkAvailableLabel = copy["home.careNetworkAvailable"]
+  const careNetworkPendingLabel = copy["home.careNetworkPending"]
+  const careNetworkViewProfileLabel = copy["home.careNetworkViewProfile"]
+  const careNetworkRemoveLabel = copy["home.careNetworkRemove"]
+  const careNetworkTitleLabel = copy["home.careNetworkTitle"]
+  const careNetworkBodyLabel = copy["home.careNetworkBody"]
+
   const eventLabels = {
-    missed: await localizedCopy("home.event.missed", locale),
-    reminded: await localizedCopy("home.event.reminded", locale),
-    scheduled: await localizedCopy("home.event.scheduled", locale),
-    skipped: await localizedCopy("home.event.skipped", locale),
-    snoozed: await localizedCopy("home.event.snoozed", locale),
-    taken: await localizedCopy("home.event.taken", locale),
+    missed: copy["home.event.missed"],
+    reminded: copy["home.event.reminded"],
+    scheduled: copy["home.event.scheduled"],
+    skipped: copy["home.event.skipped"],
+    snoozed: copy["home.event.snoozed"],
+    taken: copy["home.event.taken"],
   }
 
   const reminderTimeZone = homeTimeZone(homeData?.profile ?? profile)
-  const preferredLanguage = profile?.preferredLanguage
-    ? (profile.preferredLanguage as keyof typeof preferredLanguageLabels &
-        PreferredLanguage)
-    : "en"
   const needsOnboarding = !profile?.onboardingCompleted
 
   return (
     <main className="min-h-svh bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_26%),radial-gradient(circle_at_top_right,rgba(15,23,42,0.05),transparent_24%),linear-gradient(180deg,color-mix(in_oklch,var(--background)_92%,white)_0%,var(--background)_38%,color-mix(in_oklch,var(--background)_96%,var(--card))_100%)] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10 dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_28%),radial-gradient(circle_at_top_right,rgba(255,255,255,0.04),transparent_26%),linear-gradient(180deg,color-mix(in_oklch,var(--background)_86%,black)_0%,var(--background)_34%,color-mix(in_oklch,var(--background)_92%,var(--card))_100%)]">
       <ClearInviteCookie />
+      {profile?.onboardingCompleted ? (
+        <CompletedOnboardingExtras includeReminders />
+      ) : null}
       <div className="mx-auto flex max-w-7xl flex-col gap-6 lg:gap-8">
         {needsOnboarding ? (
           <section className="rounded-[1.75rem] border border-primary/20 bg-primary/10 px-5 py-4 text-sm text-foreground">
@@ -225,23 +211,23 @@ export default async function Page() {
           </section>
         ) : null}
 
-        <section className="overflow-hidden rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.22)] sm:p-7 lg:p-9">
-          <div className="space-y-8">
-            <div className="space-y-3">
+        <section className="overflow-hidden rounded-[1.75rem] border border-border/80 bg-card/96 p-4 shadow-[0_20px_60px_-36px_rgba(15,23,42,0.22)] sm:p-6 lg:p-7">
+          <div className="space-y-6">
+            <div className="space-y-2">
               <p className="text-[0.68rem] font-semibold tracking-[0.28em] text-primary uppercase">
                 {homeEyebrow}
               </p>
               <div className="max-w-3xl space-y-3">
-                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-balance sm:text-4xl lg:text-[3rem]">
+                <h1 className="text-[2rem] font-semibold tracking-[-0.04em] text-balance sm:text-[2.45rem] lg:text-[2.75rem]">
                   {homeTitle}, {authUser.name}
                 </h1>
-                <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.98rem] sm:leading-7">
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.95rem]">
                   {homeBody}
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(320px,1.1fr)]">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(300px,1.05fr)]">
               <MetricCard
                 detail={adherenceScoreLabel}
                 icon={<IconShieldCheck className="size-4" />}
@@ -261,12 +247,12 @@ export default async function Page() {
                     : noneLabel
                 }
               />
-              <section className="rounded-[1.5rem] border border-border/80 bg-[color-mix(in_oklch,var(--card)_74%,var(--muted))] p-5">
+              <section className="rounded-[1.25rem] border border-border/80 bg-[color-mix(in_oklch,var(--card)_74%,var(--muted))] p-4">
                 <div className="space-y-2">
                   <p className="text-[0.72rem] font-semibold tracking-[0.22em] text-primary uppercase">
                     {quickSupportLabel}
                   </p>
-                  <p className="text-lg font-semibold tracking-tight text-foreground">
+                  <p className="text-base font-semibold tracking-tight text-foreground">
                     {quickScanTitle}
                   </p>
                   <p className="text-sm leading-6 text-muted-foreground">
@@ -274,7 +260,7 @@ export default async function Page() {
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   {profile?.onboardingCompleted ? (
                     <ScanUploadDialog
                       badge={scanBadge}
@@ -304,108 +290,13 @@ export default async function Page() {
               </section>
             </div>
 
-            <section className="rounded-[2rem] border border-border/80 bg-background/72 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6 lg:p-7">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-2">
-                  <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
-                    {medicineTrackingLabel}
-                  </p>
-                  <div className="space-y-1">
-                    <h2 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.9rem]">
-                      {todayDosesLabel}
-                    </h2>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      {todayDosesBody}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:min-w-72 sm:grid-cols-2">
-                  <CompactMetricCard
-                    icon={<IconPill className="size-4" />}
-                    label={activeMedicinesLabel}
-                    value={String(homeData?.medicines.length ?? 0)}
-                    detail={beingTrackedLabel}
-                  />
-                  <CompactMetricCard
-                    icon={<IconShieldCheck className="size-4" />}
-                    label={completedLabel}
-                    value={`${homeData?.stats.taken ?? 0}/${homeData?.stats.total ?? 0}`}
-                    detail={todayLabel}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-col gap-4">
-                {!homeData || homeData.todayDoses.length === 0 ? (
-                  <EmptyStateCard
-                    body={needsOnboarding ? dosesSetupPromptLabel : noDosesLabel}
-                    icon={<IconPill className="size-5" />}
-                  />
-                ) : (
-                  homeData.todayDoses.map((dose) => {
-                    const isDone = dose.eventType !== "scheduled"
-
-                    return (
-                      <article
-                        key={dose._id}
-                        className="rounded-[1.5rem] border border-border/80 bg-card p-4 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.28)] sm:p-5"
-                      >
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="min-w-0 space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                                {dose.medicineName}
-                              </p>
-                              <StatusPill label={eventLabels[dose.eventType]} />
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-                              <span className="rounded-full border border-border/80 bg-background px-3 py-1 font-medium text-foreground/90 shadow-sm">
-                                {dose.dosage ?? doseMissingLabel}
-                              </span>
-                              <span>
-                                {dueLabel}{" "}
-                                {formatTimestampInTimeZone(
-                                  dose.dueAt,
-                                  reminderTimeZone
-                                )}
-                              </span>
-                            </div>
-
-                            {dose.instructions ? (
-                              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                                {dose.instructions}
-                              </p>
-                            ) : null}
-                          </div>
-
-                          <div className="w-full lg:w-auto lg:min-w-64">
-                            <DoseActions
-                              labels={{
-                                skip: skipActionLabel,
-                                snooze: snoozeActionLabel,
-                                taken: takenActionLabel,
-                              }}
-                              eventId={dose._id}
-                              disabled={isDone}
-                            />
-                          </div>
-                        </div>
-                      </article>
-                    )
-                  })
-                )}
-              </div>
-            </section>
-
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.86fr)]">
-              <section className="rounded-[2rem] border border-border/80 bg-background/72 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.86fr)]">
+              <section className="rounded-[1.75rem] border border-border/80 bg-background/72 p-4 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-5">
                 <div className="space-y-2">
                   <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
                     {dailyProgressLabel}
                   </p>
-                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                  <h2 className="text-[1.8rem] font-semibold tracking-tight text-foreground">
                     {last7DaysLabel}
                   </h2>
                 </div>
@@ -420,7 +311,7 @@ export default async function Page() {
                 )}
               </section>
 
-              <section className="rounded-[2rem] border border-border/80 bg-background/72 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
+              <section className="rounded-[1.75rem] border border-border/80 bg-background/72 p-4 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-5">
                 <div className="space-y-2">
                   <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
                     {recentScansLabel}
@@ -453,47 +344,104 @@ export default async function Page() {
               </section>
             </div>
 
-            <section className="rounded-[1.5rem] border border-border/80 bg-background/55 p-4 sm:p-5">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[0.68rem] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                      {utilityTitleLabel}
+            <section className="rounded-[1.75rem] border border-border/80 bg-background/72 p-4 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-5 lg:p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
+                    {medicineTrackingLabel}
+                  </p>
+                  <div className="space-y-1">
+                    <h2 className="text-[1.75rem] font-semibold tracking-tight text-foreground">
+                      {todayDosesLabel}
+                    </h2>
+                    <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+                      {todayDosesBody}
                     </p>
-                    <p className="mt-2 text-base font-semibold text-foreground">
-                      {preferredLanguageLabels[preferredLanguage]}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {profile?.onboardingCompleted
-                        ? homeStatus
-                        : onboardingStatusLabel}
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-foreground/70">
-                      <IconLanguage className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {signedInLabel}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {signedInHint}
-                      </p>
-                    </div>
                   </div>
                 </div>
 
-                <SignOutButton
-                  label={signOutLabel}
-                  pendingLabel={signingOutLabel}
-                />
+                <div className="grid gap-2 sm:grid-cols-2 lg:min-w-80">
+                  <CompactMetricCard
+                    icon={<IconPill className="size-4" />}
+                    label={activeMedicinesLabel}
+                    value={String(homeData?.medicines.length ?? 0)}
+                    detail={beingTrackedLabel}
+                  />
+                  <CompactMetricCard
+                    icon={<IconShieldCheck className="size-4" />}
+                    label={completedLabel}
+                    value={`${homeData?.stats.taken ?? 0}/${homeData?.stats.total ?? 0}`}
+                    detail={todayLabel}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3">
+                {!homeData || homeData.todayDoses.length === 0 ? (
+                  <EmptyStateCard
+                    body={needsOnboarding ? dosesSetupPromptLabel : noDosesLabel}
+                    icon={<IconPill className="size-5" />}
+                  />
+                ) : (
+                  homeData.todayDoses.map((dose) => {
+                    const isDone = dose.eventType !== "scheduled"
+
+                    return (
+                      <article
+                        key={dose._id}
+                        className="rounded-[1.25rem] border border-border/80 bg-card p-4 shadow-[0_12px_30px_-28px_rgba(15,23,42,0.28)] lg:p-5"
+                      >
+                        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                          <div className="min-w-0 flex-1 space-y-3">
+                            <div className="flex flex-wrap items-center gap-2.5">
+                              <p className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+                                {dose.medicineName}
+                              </p>
+                              <StatusPill label={eventLabels[dose.eventType]} />
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+                              <span className="rounded-full border border-border/80 bg-background px-3 py-1 font-medium text-foreground/90 shadow-sm">
+                                {dose.dosage ?? doseMissingLabel}
+                              </span>
+                              <span>
+                                {dueLabel}{" "}
+                                {formatTimestampInTimeZone(
+                                  dose.dueAt,
+                                  reminderTimeZone
+                                )}
+                              </span>
+                            </div>
+
+                            {dose.instructions ? (
+                              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                                {dose.instructions}
+                              </p>
+                            ) : null}
+                          </div>
+
+                          <div className="lg:shrink-0">
+                            <DoseActions
+                              labels={{
+                                skip: skipActionLabel,
+                                snooze: snoozeActionLabel,
+                                taken: takenActionLabel,
+                              }}
+                              eventId={dose._id}
+                              disabled={isDone}
+                            />
+                          </div>
+                        </div>
+                      </article>
+                    )
+                  })
+                )}
               </div>
             </section>
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-border/80 bg-card/96 p-5 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-7">
+        <section className="rounded-[1.75rem] border border-border/80 bg-card/96 p-4 shadow-[0_18px_50px_-38px_rgba(15,23,42,0.2)] sm:p-6">
           <div className="flex items-start gap-3">
             <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-background text-foreground/65">
               <IconUsers className="size-5" />
@@ -502,7 +450,7 @@ export default async function Page() {
               <p className="text-[0.7rem] font-semibold tracking-[0.28em] text-primary uppercase">
                 {linkedPeopleLabel}
               </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              <h2 className="mt-2 text-[1.8rem] font-semibold tracking-tight text-foreground">
                 {careNetworkTitleLabel}
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
@@ -519,9 +467,9 @@ export default async function Page() {
                 profileId: item.profileId ? String(item.profileId) : null,
                 name: item.name,
                 email: item.email,
-                direction: item.direction,
                 canOpenProfile: item.canOpenProfile,
-                activeMedicines: item.activeMedicines,
+                activeMedicines: item.activeMedicines ?? 0,
+                onboardingCompleted: item.onboardingCompleted,
               }))}
               invitePath="/api/caregiver-invite?token="
               emptyTitle={
@@ -534,8 +482,8 @@ export default async function Page() {
               }
               activeMedicinesLabel={linkedProfilesActiveMedicinesLabel}
               connectionLabels={{
-                inbound: careNetworkInboundLabel,
-                outbound: careNetworkOutboundLabel,
+                available: careNetworkAvailableLabel,
+                pending: careNetworkPendingLabel,
                 viewProfile: careNetworkViewProfileLabel,
                 remove: careNetworkRemoveLabel,
               }}
@@ -574,18 +522,18 @@ function MetricCard({
   detail: string
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-border/80 bg-background/78 p-5">
+    <div className="rounded-[1.25rem] border border-border/80 bg-background/78 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[0.68rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
             {label}
           </p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+          <p className="mt-2.5 text-[2.2rem] font-semibold tracking-tight text-foreground">
             {value}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
         </div>
-        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-card text-foreground/65">
+        <div className="flex size-9 items-center justify-center rounded-2xl border border-border bg-card text-foreground/65">
           {icon}
         </div>
       </div>
@@ -605,13 +553,13 @@ function CompactMetricCard({
   detail: string
 }) {
   return (
-    <div className="rounded-[1.25rem] border border-border/80 bg-card px-4 py-3">
+    <div className="rounded-[1.1rem] border border-border/80 bg-card px-3.5 py-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[0.68rem] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
             {label}
           </p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+          <p className="mt-1.5 text-[1.8rem] font-semibold tracking-tight text-foreground">
             {value}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
@@ -640,7 +588,7 @@ function EmptyStateCard({
   icon: React.ReactNode
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-dashed border-border/80 bg-background/50 px-4 py-5">
+    <div className="rounded-[1.25rem] border border-dashed border-border/80 bg-background/50 px-4 py-4">
       <div className="flex items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-foreground/70">
           {icon}

@@ -32,11 +32,11 @@ export async function extractImageText(
   const langs = input.preferredLanguage
     ? languageMap[input.preferredLanguage]
     : ["eng", "jpn", "chi_sim", "spa", "fra"]
+  let worker: Awaited<ReturnType<typeof createWorker>> | null = null
 
   try {
-    const worker = await createWorker(langs)
+    worker = await createWorker(langs)
     const result = await worker.recognize(input.imageUrl)
-    await worker.terminate()
 
     return {
       text: result.data.text.trim(),
@@ -46,6 +46,10 @@ export async function extractImageText(
     return {
       text: "",
       confidence: 0,
+    }
+  } finally {
+    if (worker) {
+      await worker.terminate().catch(() => undefined)
     }
   }
 }

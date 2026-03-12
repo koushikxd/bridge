@@ -6,6 +6,7 @@ import { mutation, query } from "./_generated/server"
 import type { DataModel, Doc, Id } from "./_generated/dataModel"
 import {
   getAuthUserRecord,
+  getActiveConnectionBetweenUsers,
   getCaregiverLinksForUser,
   getProfileForUserId,
   getUserDisplayName,
@@ -15,6 +16,17 @@ import { preferredLanguageValidator } from "./validators"
 type MutationCtx = GenericMutationCtx<DataModel>
 type QueryCtx = GenericQueryCtx<DataModel>
 type ProfileCtx = MutationCtx | QueryCtx
+type CareNetworkConnection = {
+  linkId: Id<"caregiverLinks">
+  userId: string
+  profileId: Id<"profiles"> | null
+  name: string
+  email: string | null
+  direction: "inbound" | "outbound"
+  canOpenProfile: boolean
+  activeMedicines: number
+  onboardingCompleted: boolean
+}
 
 function createInviteToken() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`
@@ -108,6 +120,8 @@ export const getInviteContext = query({
     return {
       patientName: getUserDisplayName({
         name: patientUser?.name,
+        displayUsername: patientUser?.displayUsername,
+        username: patientUser?.username,
         email: patientUser?.email,
       }),
       patientEmail: patientUser?.email ?? null,
@@ -373,12 +387,15 @@ export const getLinkedProfiles = query({
           profileId: patient._id,
           name: getUserDisplayName({
             name: patientUser?.name,
+            displayUsername: patientUser?.displayUsername,
+            username: patientUser?.username,
             email: patientUser?.email,
           }),
           email: patientUser?.email ?? null,
           direction: "outbound" as const,
           canOpenProfile: true,
           activeMedicines: medicines.length,
+          onboardingCompleted: patient.onboardingCompleted,
         }
       })
     )
@@ -386,7 +403,7 @@ export const getLinkedProfiles = query({
     const outboundConnections = connectionsAsViewer.filter(
       (item): item is NonNullable<(typeof connectionsAsViewer)[number]> =>
         item !== null
-    )
+    ) as CareNetworkConnection[]
 
     const inboundConnections = ownProfile
       ? await Promise.all(
@@ -402,26 +419,65 @@ export const getLinkedProfiles = query({
               ctx,
               link.caregiverUserId
             )
+            const caregiverProfile = await getProfileForUserId(
+              ctx,
+              link.caregiverUserId
+            )
+            const caregiverMedicines = caregiverProfile
+              ? await ctx.db
+                  .query("medicines")
+                  .withIndex("profileId_isActive", (q) =>
+                    q.eq("profileId", caregiverProfile._id).eq("isActive", true)
+                  )
+                  .collect()
+              : []
 
             return {
               linkId: link._id,
               userId: link.caregiverUserId,
-              profileId: null,
+              profileId: caregiverProfile?._id ?? null,
               name: getUserDisplayName({
                 name: caregiverUser?.name,
+                displayUsername: caregiverUser?.displayUsername,
+                username: caregiverUser?.username,
                 email: caregiverUser?.email ?? link.caregiverEmail,
               }),
               email: caregiverUser?.email ?? link.caregiverEmail ?? null,
               direction: "inbound" as const,
-              canOpenProfile: false,
-              activeMedicines: null,
+              canOpenProfile: caregiverProfile !== null,
+              activeMedicines: caregiverMedicines.length,
+              onboardingCompleted: caregiverProfile?.onboardingCompleted ?? false,
             }
           })
         )
       : []
 
-    const connections = [...inboundConnections, ...outboundConnections].sort(
-      (a, b) => a.name.localeCompare(b.name)
+    const dedupedConnections = new Map<string, CareNetworkConnection>()
+
+    for (const connection of [...inboundConnections, ...outboundConnections]) {
+      const existing = dedupedConnections.get(connection.userId)
+
+      if (!existing) {
+        dedupedConnections.set(connection.userId, connection)
+        continue
+      }
+
+      dedupedConnections.set(connection.userId, {
+        ...existing,
+        ...connection,
+        profileId: connection.profileId ?? existing.profileId,
+        activeMedicines: Math.max(
+          connection.activeMedicines ?? 0,
+          existing.activeMedicines ?? 0
+        ),
+        onboardingCompleted:
+          connection.onboardingCompleted || existing.onboardingCompleted,
+        canOpenProfile: connection.canOpenProfile || existing.canOpenProfile,
+      })
+    }
+
+    const connections = Array.from(dedupedConnections.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
     )
 
     return {
@@ -539,12 +595,12 @@ export const getAccessibleProfileSummary = query({
     const target = targetProfile as Doc<"profiles">
 
     if (target.userId !== user._id) {
-      const caregiverLinks = await getCaregiverLinksForUser(ctx, user._id)
-      const canAccess = caregiverLinks.some(
-        (link) => link.patientProfileId === target._id
-      )
+      const connection = await getActiveConnectionBetweenUsers(ctx, {
+        userId: user._id,
+        connectedUserId: target.userId,
+      })
 
-      if (!canAccess) {
+      if (!connection) {
         return null
       }
     }
@@ -555,6 +611,8 @@ export const getAccessibleProfileSummary = query({
       profileId: target._id as Id<"profiles">,
       userName: getUserDisplayName({
         name: targetUser?.name,
+        displayUsername: targetUser?.displayUsername,
+        username: targetUser?.username,
         email: targetUser?.email,
       }),
       userEmail: targetUser?.email ?? null,
