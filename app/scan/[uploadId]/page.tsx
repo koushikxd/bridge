@@ -34,14 +34,28 @@ function toneClass(status: string) {
 function pillClass(status: string) {
   switch (status) {
     case "safe":
-      return "border-primary/20 bg-primary/10 text-foreground"
+      return "border-primary/20 bg-primary/10 text-primary"
     case "caution":
-      return "border-chart-4/25 bg-chart-4/12 text-foreground"
+      return "border-chart-4/25 bg-chart-4/12 text-chart-4"
     case "risky":
     case "failed":
-      return "border-destructive/25 bg-destructive/10 text-foreground"
+      return "border-destructive/25 bg-destructive/10 text-destructive"
     default:
       return "border-border/80 bg-muted/70 text-muted-foreground"
+  }
+}
+
+function statusDotClass(status: string) {
+  switch (status) {
+    case "safe":
+      return "bg-primary"
+    case "caution":
+      return "bg-chart-4"
+    case "risky":
+    case "failed":
+      return "bg-destructive"
+    default:
+      return "bg-muted-foreground/60"
   }
 }
 
@@ -194,9 +208,16 @@ export default async function ScanResultPage({
     result.upload.status === "failed" ||
     (!!analysis &&
       (safetyStatus === "unknown" || (analysis.confidence ?? 0) < 0.4))
+  const matchedRules = analysis?.matchedProfileRules ?? []
+  const flaggedAllergens = analysis?.flaggedAllergens ?? []
+  const flaggedIngredients = analysis?.flaggedIngredients ?? []
+  const summaryText = isProcessing
+    ? reviewingLabel
+    : (analysis?.whyFlagged ?? result.upload.processingError ?? reviewingLabel)
+  const nextAction = analysis?.suggestedNextAction ?? retryLabel
 
   return (
-    <main className="min-h-svh bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_10%,transparent),transparent_34%),linear-gradient(to_bottom,_color-mix(in_oklch,var(--muted)_42%,transparent),transparent_24%)] px-4 py-5 sm:px-6 sm:py-8">
+    <main className="min-h-svh bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_10%,transparent),transparent_32%),linear-gradient(to_bottom,_color-mix(in_oklch,var(--muted)_42%,transparent),transparent_24%)] px-4 py-4 sm:px-6 sm:py-8">
       <CompletedOnboardingExtras />
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center gap-3">
@@ -209,26 +230,29 @@ export default async function ScanResultPage({
           </Link>
         </div>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-          <section className="order-2 h-fit rounded-[2rem] border border-border/80 bg-card/95 p-4 shadow-sm sm:p-5 xl:sticky xl:top-6 xl:order-1">
+        <div className="mt-5 grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+          <section className="order-2 h-fit rounded-[2rem] border border-border/70 bg-card/95 p-4 shadow-sm sm:p-5 xl:sticky xl:top-6 xl:order-1">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
                 {imageLabel}
               </p>
               <span
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold tracking-[0.16em] uppercase ${pillClass(isProcessing ? result.upload.status : safetyStatus)}`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.72rem] font-semibold tracking-[0.16em] uppercase ${pillClass(isProcessing ? result.upload.status : safetyStatus)}`}
               >
+                <span
+                  className={`size-2 rounded-full ${statusDotClass(isProcessing ? result.upload.status : safetyStatus)}`}
+                />
                 {isProcessing ? previewStatus : displayStatus}
               </span>
             </div>
 
             {result.fileUrl ? (
-              <div className="relative mt-4 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-border/80 bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_10%,transparent),transparent_48%),color-mix(in_oklch,var(--muted)_58%,var(--background))]">
+              <div className="relative mt-4 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-border/80 bg-[radial-gradient(circle_at_top,_color-mix(in_oklch,var(--primary)_8%,transparent),transparent_48%),color-mix(in_oklch,var(--muted)_58%,var(--background))]">
                 <Image
                   src={result.fileUrl}
                   alt={result.upload.fileName}
                   fill
-                  className="object-contain p-3"
+                  className="object-contain p-4"
                   sizes="(max-width: 1279px) 100vw, 320px"
                 />
               </div>
@@ -238,49 +262,55 @@ export default async function ScanResultPage({
               </div>
             )}
 
-            <div className="mt-4 rounded-[1.25rem] border border-border/70 bg-background/80 px-4 py-3">
+            <div className="mt-4 rounded-[1.4rem] border border-border/70 bg-background/80 p-4">
               <p className="truncate text-sm font-semibold text-foreground">
                 {result.upload.fileName}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {safetyStatusLabel}:{" "}
-                {isProcessing ? previewStatus : displayStatus}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {confidenceLabel}: {confidenceText}
-              </p>
+              <dl className="mt-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">{safetyStatusLabel}</dt>
+                  <dd className="font-medium text-foreground">
+                    {isProcessing ? previewStatus : displayStatus}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted-foreground">{confidenceLabel}</dt>
+                  <dd className="font-medium text-foreground">
+                    {confidenceText}
+                  </dd>
+                </div>
+              </dl>
             </div>
           </section>
 
-          <section className="order-1 rounded-[2rem] border border-border/80 bg-card/95 p-5 shadow-sm sm:p-6 xl:order-2">
+          <section className="order-1 rounded-[2rem] border border-border/70 bg-card/95 p-5 shadow-sm sm:p-6 xl:order-2">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="space-y-3">
                 <p className="text-xs font-medium tracking-[0.24em] text-primary uppercase">
                   {resultLabel}
                 </p>
                 <div>
-                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  <h1 className="max-w-3xl text-2xl font-semibold tracking-tight text-foreground sm:text-4xl">
                     {title}
                   </h1>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                    {isProcessing
-                      ? reviewingLabel
-                      : (analysis?.whyFlagged ??
-                        result.upload.processingError ??
-                        reviewingLabel)}
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-[0.95rem]">
+                    {summaryText}
                   </p>
                 </div>
               </div>
               <div
-                className={`inline-flex items-center rounded-full border px-3 py-1 text-[0.72rem] font-semibold tracking-[0.16em] uppercase ${pillClass(isProcessing ? result.upload.status : safetyStatus)}`}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.72rem] font-semibold tracking-[0.16em] uppercase ${pillClass(isProcessing ? result.upload.status : safetyStatus)}`}
               >
+                <span
+                  className={`size-2 rounded-full ${statusDotClass(isProcessing ? result.upload.status : safetyStatus)}`}
+                />
                 {isProcessing ? previewStatus : displayStatus}
               </div>
             </div>
 
             {isProcessing ? (
               <>
-                <div className="mt-6 rounded-[1.75rem] border border-border/70 bg-background/85 p-5">
+                <div className="mt-7 rounded-[1.75rem] border border-border/70 bg-background/85 p-5 sm:p-6">
                   <div className="flex items-start gap-4">
                     <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                       <Spinner className="size-5" />
@@ -327,74 +357,81 @@ export default async function ScanResultPage({
             ) : (
               <>
                 <div
-                  className={`mt-6 rounded-[1.5rem] border px-4 py-4 ${toneClass(safetyStatus)}`}
+                  className={`mt-7 rounded-[1.75rem] border p-5 sm:p-6 ${toneClass(safetyStatus)}`}
                 >
-                  <p className="text-lg font-semibold tracking-tight text-foreground">
-                    {title}
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {safetyStatusLabel}: {displayStatus}
-                  </p>
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                    <div className="flex flex-col items-start justify-center">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        {safetyStatusLabel}
+                      </p>
+                      <p className="mt-2 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                        {displayStatus}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 sm:min-w-72">
+                      <MetricTile
+                        label={confidenceLabel}
+                        value={confidenceText}
+                      />
+                      <MetricTile
+                        label={profileMatchesLabel}
+                        value={matchedRules.length.toString()}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-5 grid gap-4 text-sm leading-6 text-muted-foreground sm:grid-cols-3">
+                <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                   <ResultItem
                     label={whyLabel}
-                    value={
-                      analysis?.whyFlagged ??
-                      result.upload.processingError ??
-                      reviewingLabel
-                    }
+                    value={summaryText}
+                    className="h-full"
                   />
                   <ResultItem
                     label={nextLabel}
-                    value={analysis?.suggestedNextAction ?? retryLabel}
+                    value={nextAction}
+                    className="h-full"
                   />
-                  <ResultItem label={confidenceLabel} value={confidenceText} />
                 </div>
 
-                {analysis?.flaggedAllergens &&
-                  analysis.flaggedAllergens.length > 0 && (
-                    <div className="mt-4">
+                <div className="mt-5 grid gap-4">
+                  {flaggedAllergens.length > 0 && (
+                    <div>
                       <TagList
                         label={flaggedAllergensLabel}
-                        items={analysis.flaggedAllergens}
+                        items={flaggedAllergens}
                         variant="danger"
                       />
                     </div>
                   )}
 
-                {analysis?.flaggedIngredients &&
-                  analysis.flaggedIngredients.length > 0 && (
-                    <div className="mt-4">
+                  {flaggedIngredients.length > 0 && (
+                    <div>
                       <TagList
                         label={flaggedIngredientsLabel}
-                        items={analysis.flaggedIngredients}
+                        items={flaggedIngredients}
                         variant="warning"
                       />
                     </div>
                   )}
 
-                {analysis?.matchedProfileRules &&
-                  analysis.matchedProfileRules.length > 0 && (
-                    <div className="mt-4">
+                  {matchedRules.length > 0 && (
+                    <div>
                       <ResultItem
                         label={profileMatchesLabel}
-                        value={analysis.matchedProfileRules.join(" · ")}
+                        value={matchedRules.join(" · ")}
                       />
                     </div>
                   )}
+                </div>
 
                 {richData?.medicines && richData.medicines.length > 0 && (
-                  <div className="mt-5">
-                    <p className="mb-3 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
-                      {medicinesLabel}
-                    </p>
+                  <SectionBlock label={medicinesLabel} className="mt-6">
                     <div className="grid gap-3">
                       {richData.medicines.map((med) => (
                         <div
                           key={med.name}
-                          className="rounded-[1.25rem] border border-border/70 bg-background px-4 py-3"
+                          className="rounded-[1.25rem] border border-border/70 bg-background/90 p-4"
                         >
                           <p className="text-sm font-semibold text-foreground">
                             {med.name}
@@ -414,40 +451,42 @@ export default async function ScanResultPage({
                         </div>
                       ))}
                     </div>
-                  </div>
+                  </SectionBlock>
                 )}
 
-                {richData?.ingredients && richData.ingredients.length > 0 && (
-                  <div className="mt-4">
-                    <TagList
-                      label={ingredientsLabel}
-                      items={richData.ingredients}
-                      variant="neutral"
-                    />
-                  </div>
-                )}
-
-                {richData?.allergens && richData.allergens.length > 0 && (
-                  <div className="mt-4">
-                    <TagList
-                      label={allergensLabel}
-                      items={richData.allergens}
-                      variant="warning"
-                    />
-                  </div>
-                )}
-
-                {richData?.nutritionHighlights &&
-                  richData.nutritionHighlights.length > 0 && (
-                    <div className="mt-4">
-                      <ResultItem
-                        label={nutritionLabel}
-                        value={richData.nutritionHighlights.join(" · ")}
+                <div className="mt-4 grid gap-4">
+                  {richData?.ingredients && richData.ingredients.length > 0 && (
+                    <div>
+                      <TagList
+                        label={ingredientsLabel}
+                        items={richData.ingredients}
+                        variant="neutral"
                       />
                     </div>
                   )}
 
-                <div className="mt-6 flex flex-wrap gap-3">
+                  {richData?.allergens && richData.allergens.length > 0 && (
+                    <div>
+                      <TagList
+                        label={allergensLabel}
+                        items={richData.allergens}
+                        variant="warning"
+                      />
+                    </div>
+                  )}
+
+                  {richData?.nutritionHighlights &&
+                    richData.nutritionHighlights.length > 0 && (
+                      <div>
+                        <ResultItem
+                          label={nutritionLabel}
+                          value={richData.nutritionHighlights.join(" · ")}
+                        />
+                      </div>
+                    )}
+                </div>
+
+                <div className="mt-8 flex flex-wrap gap-3 border-t border-border/60 pt-5">
                   <Link
                     href="/scan"
                     className="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
@@ -474,13 +513,23 @@ export default async function ScanResultPage({
   )
 }
 
-function ResultItem({ label, value }: { label: string; value: string }) {
+function ResultItem({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) {
   return (
-    <div className="rounded-[1.25rem] border border-border/70 bg-background px-4 py-3">
+    <div
+      className={`rounded-[1.35rem] border border-border/70 bg-background/90 p-4 sm:p-5 ${className ?? ""}`}
+    >
       <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="mt-1.5 text-sm leading-6 text-foreground/88">{value}</p>
+      <p className="mt-2 text-sm leading-7 text-foreground/88">{value}</p>
     </div>
   )
 }
@@ -507,6 +556,38 @@ function Detail({ label, value }: { label: string; value: string }) {
   )
 }
 
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[1.1rem] border border-border/60 bg-background/70 px-4 py-3">
+      <p className="text-[0.68rem] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <p className="mt-1.5 text-lg font-semibold text-foreground">{value}</p>
+    </div>
+  )
+}
+
+function SectionBlock({
+  label,
+  className,
+  children,
+}: {
+  label: string
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      className={`rounded-[1.5rem] border border-border/70 bg-background/65 p-4 sm:p-5 ${className ?? ""}`}
+    >
+      <p className="mb-3 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      {children}
+    </section>
+  )
+}
+
 function TagList({
   label,
   items,
@@ -517,21 +598,21 @@ function TagList({
   variant: "danger" | "warning" | "neutral"
 }) {
   const tagColors = {
-    danger: "bg-destructive/12 text-destructive border-destructive/20",
-    warning: "bg-chart-4/12 text-chart-4 border-chart-4/20",
-    neutral: "bg-muted text-muted-foreground border-border/70",
+    danger: "border-destructive/20 bg-destructive/12 text-destructive",
+    warning: "border-chart-4/20 bg-chart-4/12 text-chart-4",
+    neutral: "border-border/70 bg-muted text-muted-foreground",
   }
 
   return (
-    <div className="rounded-[1.25rem] border border-border/70 bg-background px-4 py-3">
+    <div className="rounded-[1.35rem] border border-border/70 bg-background/90 p-4 sm:p-5">
       <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
         {label}
       </p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex flex-wrap gap-2">
         {items.map((item) => (
           <span
             key={item}
-            className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${tagColors[variant]}`}
+            className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${tagColors[variant]}`}
           >
             {item}
           </span>
