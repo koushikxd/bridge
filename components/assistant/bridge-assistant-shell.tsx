@@ -6,10 +6,14 @@ import {
   IconAlertCircle,
   IconLoader2,
   IconMessageCircle2,
+  IconMicrophone,
+  IconPlayerStop,
   IconSend,
   IconSparkles,
+  IconVolume,
+  IconVolumeOff,
 } from "@tabler/icons-react"
-import { useEffect, useRef, useState, type RefObject } from "react"
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +32,16 @@ import {
 } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useSharedAudioPreference } from "@/hooks/use-shared-audio-preference"
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition"
+import { useSpeechTts } from "@/hooks/use-speech-tts"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { extractMessageText } from "@/lib/speech"
 
 const transport = new DefaultChatTransport({ api: "/api/chat" })
 
@@ -41,6 +55,14 @@ type AssistantText = {
   loading: string
   error: string
   empty: string
+  voiceListen: string
+  voiceStopListening: string
+  voiceMute: string
+  voiceUnmute: string
+  voiceSpeaking: string
+  voiceUnsupported: string
+  voicePermissionDenied: string
+  voiceMicUnavailable: string
 }
 
 export function BridgeAssistantShell({
@@ -54,7 +76,7 @@ export function BridgeAssistantShell({
   const [open, setOpen] = useState(false)
 
   return (
-    <>
+    <TooltipProvider>
       {isMobile ? (
         <Drawer open={open} onOpenChange={setOpen}>
           <DrawerContent
@@ -62,7 +84,10 @@ export function BridgeAssistantShell({
             className="h-[88svh] rounded-t-[1.9rem] border-t border-border/80 bg-card p-0"
           >
             <DrawerHeader className="border-b border-border/70 px-5 pt-3 pb-4 text-left">
-              <MobileHeader uiText={uiText} />
+              <MobileHeader
+                uiText={uiText}
+                preferredLanguage={preferredLanguage}
+              />
             </DrawerHeader>
             {open ? (
               <AssistantChatSession
@@ -81,7 +106,10 @@ export function BridgeAssistantShell({
             className="w-[28rem] border-l border-border/80 bg-card p-0 shadow-[0_16px_48px_-28px_rgba(15,23,42,0.22)] sm:max-w-[28rem]"
           >
             <SheetHeader className="border-b border-border/70 px-5 py-4">
-              <DesktopHeader uiText={uiText} />
+              <DesktopHeader
+                preferredLanguage={preferredLanguage}
+                uiText={uiText}
+              />
             </SheetHeader>
             {open ? (
               <AssistantChatSession
@@ -100,7 +128,7 @@ export function BridgeAssistantShell({
           onClick={() => setOpen((current) => !current)}
         />
       ) : null}
-    </>
+    </TooltipProvider>
   )
 }
 
@@ -114,31 +142,95 @@ function AssistantChatSession({
   const [input, setInput] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const spokenMessageIds = useRef(new Set<string>())
+  const handleTranscript = useCallback((value: string) => {
+    setInput(value)
+  }, [])
   const { messages, sendMessage, status, error } = useChat({ transport })
   const isLoading = status === "streaming" || status === "submitted"
+  const { muted } = useSharedAudioPreference()
+  const { speak, speaking } = useSpeechTts(preferredLanguage, muted)
+  const {
+    error: recognitionError,
+    listening,
+    liveTranscript,
+    start: startListening,
+    stop: stopListening,
+    supported: recognitionSupported,
+  } = useSpeechRecognition(preferredLanguage, uiText.voiceUnsupported, {
+    onFinalTranscript: handleTranscript,
+  })
+
+  useEffect(() => {
+    const latestAssistantMessage = [...messages]
+      .reverse()
+      .find((message) => message.role === "assistant")
+
+    if (!latestAssistantMessage || isLoading) {
+      return
+    }
+
+    if (spokenMessageIds.current.has(latestAssistantMessage.id)) {
+      return
+    }
+
+    const messageText = extractMessageText(latestAssistantMessage.parts)
+    if (!messageText) {
+      return
+    }
+
+    spokenMessageIds.current.add(latestAssistantMessage.id)
+    speak(messageText)
+  }, [isLoading, messages, speak])
 
   return (
     <AssistantPanel
       error={error}
       input={input}
       isLoading={isLoading}
+      listening={listening}
       messages={messages}
       preferredLanguage={preferredLanguage}
+      recognitionSupported={recognitionSupported}
       scrollRef={scrollRef}
       sendMessage={sendMessage}
       setInput={setInput}
+      startListening={startListening}
+      stopListening={stopListening}
       textareaRef={textareaRef}
       uiText={uiText}
+      voiceStatus={
+        recognitionError === "permission-denied"
+          ? uiText.voicePermissionDenied
+          : recognitionError === "mic-unavailable"
+            ? uiText.voiceMicUnavailable
+            : recognitionError
+              ? uiText.voiceUnsupported
+              : liveTranscript
+                ? liveTranscript
+                : speaking
+                  ? uiText.voiceSpeaking
+                  : null
+      }
     />
   )
 }
 
-function MobileHeader({ uiText }: { uiText: AssistantText }) {
+function MobileHeader({
+  preferredLanguage,
+  uiText,
+}: {
+  preferredLanguage: string
+  uiText: AssistantText
+}) {
   return (
     <div className="space-y-3 text-left">
-      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/70 uppercase">
-        <IconSparkles className="size-3.5 text-primary" />
-        {uiText.eyebrow}
+      <div className="flex items-start justify-between gap-3">
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/70 uppercase">
+          <IconSparkles className="size-3.5 text-primary" />
+          {uiText.eyebrow}
+        </div>
+        <MuteButton locale={preferredLanguage} uiText={uiText} />
       </div>
       <DrawerTitle className="text-[1.8rem] font-semibold tracking-[-0.05em] text-foreground">
         {uiText.title}
@@ -150,12 +242,21 @@ function MobileHeader({ uiText }: { uiText: AssistantText }) {
   )
 }
 
-function DesktopHeader({ uiText }: { uiText: AssistantText }) {
+function DesktopHeader({
+  preferredLanguage,
+  uiText,
+}: {
+  preferredLanguage: string
+  uiText: AssistantText
+}) {
   return (
     <div className="space-y-3 text-left">
-      <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/70 uppercase">
-        <IconSparkles className="size-3.5 text-primary" />
-        {uiText.eyebrow}
+      <div className="flex items-start justify-between gap-3">
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[0.72rem] font-semibold tracking-[0.18em] text-foreground/70 uppercase">
+          <IconSparkles className="size-3.5 text-primary" />
+          {uiText.eyebrow}
+        </div>
+        <MuteButton locale={preferredLanguage} uiText={uiText} />
       </div>
       <SheetTitle className="text-[1.65rem] font-semibold tracking-[-0.05em] text-foreground">
         {uiText.title}
@@ -164,6 +265,50 @@ function DesktopHeader({ uiText }: { uiText: AssistantText }) {
         {uiText.body}
       </SheetDescription>
     </div>
+  )
+}
+
+function MuteButton({
+  locale,
+  uiText,
+}: {
+  locale: string
+  uiText: AssistantText
+}) {
+  const { muted, setMuted } = useSharedAudioPreference()
+  const { stop } = useSpeechTts(locale, muted)
+
+  function handleToggle() {
+    const nextMuted = !muted
+    setMuted(nextMuted)
+    if (nextMuted) {
+      stop()
+    }
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={muted ? uiText.voiceUnmute : uiText.voiceMute}
+            onClick={handleToggle}
+          />
+        }
+      >
+        {muted ? (
+          <IconVolumeOff className="size-4" />
+        ) : (
+          <IconVolume className="size-4" />
+        )}
+      </TooltipTrigger>
+      <TooltipContent>
+        {muted ? uiText.voiceUnmute : uiText.voiceMute}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -194,24 +339,34 @@ function AssistantPanel({
   error,
   input,
   isLoading,
+  listening,
   messages,
   preferredLanguage,
+  recognitionSupported,
   scrollRef,
   sendMessage,
   setInput,
+  startListening,
+  stopListening,
   textareaRef,
   uiText,
+  voiceStatus,
 }: {
   error: Error | undefined
   input: string
   isLoading: boolean
+  listening: boolean
   messages: Awaited<ReturnType<typeof useChat>>["messages"]
   preferredLanguage: string
+  recognitionSupported: boolean
   scrollRef: RefObject<HTMLDivElement | null>
   sendMessage: Awaited<ReturnType<typeof useChat>>["sendMessage"]
   setInput: (value: string) => void
+  startListening: () => boolean
+  stopListening: () => void
   textareaRef: RefObject<HTMLTextAreaElement | null>
   uiText: AssistantText
+  voiceStatus: string | null
 }) {
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -232,6 +387,7 @@ function AssistantPanel({
       return
     }
 
+    stopListening()
     sendMessage(
       { text },
       {
@@ -242,6 +398,19 @@ function AssistantPanel({
     )
 
     setInput("")
+  }
+
+  function handleMicToggle() {
+    if (!recognitionSupported) {
+      return
+    }
+
+    if (listening) {
+      stopListening()
+      return
+    }
+
+    startListening()
   }
 
   return (
@@ -314,31 +483,66 @@ function AssistantPanel({
       </div>
 
       <div className="border-t border-border/70 bg-card px-4 py-4 sm:px-5">
-        <div className="flex items-end gap-3">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault()
-                handleSend()
-              }
-            }}
-            placeholder={uiText.placeholder}
-            disabled={isLoading}
-            className="min-h-24 rounded-[1.2rem] border-border bg-background px-4 py-3 text-sm leading-7 shadow-none"
-          />
-          <Button
-            type="button"
-            size="icon-lg"
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            className="mb-1 shrink-0 rounded-full"
-            aria-label={uiText.send}
-          >
-            <IconSend className="size-4.5" />
-          </Button>
+        <div className="space-y-2">
+          {voiceStatus ? (
+            <p className="px-1 text-xs text-muted-foreground">{voiceStatus}</p>
+          ) : null}
+          <div className="flex items-end gap-3">
+            <Textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault()
+                  handleSend()
+                }
+              }}
+              placeholder={uiText.placeholder}
+              disabled={isLoading}
+              className="min-h-24 rounded-[1.2rem] border-border bg-background px-4 py-3 text-sm leading-7 shadow-none"
+            />
+            <div className="mb-1 flex shrink-0 items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      size="icon-lg"
+                      variant={listening ? "secondary" : "outline"}
+                      onClick={handleMicToggle}
+                      disabled={isLoading || !recognitionSupported}
+                      aria-label={
+                        listening
+                          ? uiText.voiceStopListening
+                          : uiText.voiceListen
+                      }
+                      className="rounded-full"
+                    />
+                  }
+                >
+                  {listening ? (
+                    <IconPlayerStop className="size-4.5" />
+                  ) : (
+                    <IconMicrophone className="size-4.5" />
+                  )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {listening ? uiText.voiceStopListening : uiText.voiceListen}
+                </TooltipContent>
+              </Tooltip>
+              <Button
+                type="button"
+                size="icon-lg"
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className="rounded-full"
+                aria-label={uiText.send}
+              >
+                <IconSend className="size-4.5" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -31,7 +31,7 @@ export function LanguageOnboardingForm({
     onboardingSaving: string
     onboardingBody: string
   }
-  onComplete?: () => void
+  onComplete?: (preferredLanguage: PreferredLanguage) => void
 }) {
   const router = useRouter()
   const upsertPreferredLanguage = useMutation(
@@ -55,7 +55,7 @@ export function LanguageOnboardingForm({
       router.refresh()
 
       if (onComplete) {
-        onComplete()
+        onComplete(values.preferredLanguage)
       } else {
         router.replace("/")
         router.refresh()

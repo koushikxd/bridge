@@ -22,6 +22,14 @@ export async function BridgeAssistant() {
     loading,
     error,
     empty,
+    voiceListen,
+    voiceStopListening,
+    voiceMute,
+    voiceUnmute,
+    voiceSpeaking,
+    voiceUnsupported,
+    voicePermissionDenied,
+    voiceMicUnavailable,
   ] = await Promise.all([
     localizedCopy("assistant.trigger", locale),
     localizedCopy("assistant.eyebrow", locale),
@@ -32,6 +40,14 @@ export async function BridgeAssistant() {
     localizedCopy("assistant.loading", locale),
     localizedCopy("assistant.error", locale),
     localizedCopy("assistant.empty", locale),
+    localizedCopy("voice.listen", locale),
+    localizedCopy("voice.stopListening", locale),
+    localizedCopy("voice.mute", locale),
+    localizedCopy("voice.unmute", locale),
+    localizedCopy("voice.speaking", locale),
+    localizedCopy("voice.unsupported", locale),
+    localizedCopy("voice.permissionDenied", locale),
+    localizedCopy("voice.micUnavailable", locale),
   ])
 
   return (
@@ -47,6 +63,14 @@ export async function BridgeAssistant() {
         loading,
         error,
         empty,
+        voiceListen,
+        voiceStopListening,
+        voiceMute,
+        voiceUnmute,
+        voiceSpeaking,
+        voiceUnsupported,
+        voicePermissionDenied,
+        voiceMicUnavailable,
       }}
     />
   )

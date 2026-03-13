@@ -6,10 +6,12 @@ Bridge is a multilingual AI health companion for patients and caregivers. It hel
 
 - Better-Auth
 - Guided onboarding with language selection, profile questions, and medicine setup
+- Voice enabled onboarding with speech to text input and spoken responses
 - Medicine tracking with schedules, daily dose states, and adherence history
 - Reminder preferences for in app and local reminder flows
 - Image uploads for prescriptions, medicine labels, food labels, meals, menus, and other health related items
 - OCR plus Gemini based analysis with structured results such as safety status, flagged risks, and next action
+- AI assistant with voice input, text to speech replies, and preferred language responses
 - Multilingual UI and localized patient facing output
 - Caregiver invite flow with shared access to linked patient profiles
 - PWA support for mobile first use

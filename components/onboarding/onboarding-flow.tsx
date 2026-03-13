@@ -35,6 +35,14 @@ export function OnboardingFlow({
     chatDone: string
     chatError: string
     chatKickoff: string
+    voiceListen: string
+    voiceStopListening: string
+    voiceMute: string
+    voiceUnmute: string
+    voiceSpeaking: string
+    voiceUnsupported: string
+    voicePermissionDenied: string
+    voiceMicUnavailable: string
     medicationEyebrow: string
     medicationTitle: string
     medicationBody: string
@@ -53,6 +61,8 @@ export function OnboardingFlow({
   }
 }) {
   const [stepOverride, setStepOverride] = useState<OnboardingStep | null>(null)
+  const [currentLanguage, setCurrentLanguage] =
+    useState<PreferredLanguage>(defaultLanguage)
   const step = stepOverride ?? initialStep
 
   if (step === "language") {
@@ -80,9 +90,12 @@ export function OnboardingFlow({
             onboardingSaving: uiText.onboardingSaving,
             onboardingBody: uiText.onboardingBody,
           }}
-          onComplete={() =>
-            setStepOverride(uiText.hasCaregiverLinks ? "medications" : "chat")
-          }
+          onComplete={(preferredLanguage) => {
+            setCurrentLanguage(preferredLanguage)
+            setStepOverride(
+              uiText.hasCaregiverLinks ? "medications" : "chat"
+            )
+          }}
         />
       </div>
     )
@@ -118,7 +131,7 @@ export function OnboardingFlow({
         <OnboardingChat
           userName={userName}
           onComplete={() => setStepOverride("medications")}
-          locale={defaultLanguage}
+          locale={currentLanguage}
           uiText={{
             chatEyebrow: uiText.chatEyebrow,
             chatSubtitle: uiText.chatSubtitle,
@@ -128,6 +141,14 @@ export function OnboardingFlow({
             chatDone: uiText.chatDone,
             chatError: uiText.chatError,
             chatKickoff: uiText.chatKickoff,
+            voiceListen: uiText.voiceListen,
+            voiceStopListening: uiText.voiceStopListening,
+            voiceMute: uiText.voiceMute,
+            voiceUnmute: uiText.voiceUnmute,
+            voiceSpeaking: uiText.voiceSpeaking,
+            voiceUnsupported: uiText.voiceUnsupported,
+            voicePermissionDenied: uiText.voicePermissionDenied,
+            voiceMicUnavailable: uiText.voiceMicUnavailable,
           }}
         />
       </div>
