@@ -117,11 +117,6 @@ export function CareNetworkManager({
                     <p className="truncate text-[0.98rem] font-semibold text-foreground">
                       {connection.name}
                     </p>
-                    {connection.email ? (
-                      <p className="mt-1 truncate text-sm text-muted-foreground">
-                        {connection.email}
-                      </p>
-                    ) : null}
                     <p className="mt-1.5 text-sm text-muted-foreground">
                       {helperText}
                     </p>

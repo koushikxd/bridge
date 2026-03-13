@@ -126,7 +126,7 @@ export default async function ProfileDetailPage({
             {summary.userName}
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {summary.userEmail ?? profileOverview}
+            {profileOverview}
           </p>
 
           {!summary.onboardingCompleted ? (

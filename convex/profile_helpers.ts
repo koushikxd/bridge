@@ -1,6 +1,7 @@
 import type { GenericMutationCtx, GenericQueryCtx } from "convex/server"
 
 import { authComponent } from "./better-auth/auth"
+import { components } from "./_generated/api"
 import type { DataModel, Doc, Id } from "./_generated/dataModel"
 
 type ProfileCtx = GenericQueryCtx<DataModel> | GenericMutationCtx<DataModel>
@@ -30,6 +31,15 @@ export async function requireCurrentProfile(ctx: ProfileCtx): Promise<{
 }
 
 export async function getAuthUserRecord(ctx: ProfileCtx, userId: string) {
+  const componentRecord = await ctx.runQuery(components.betterAuth.adapter.findOne, {
+    model: "user",
+    where: [{ field: "_id", value: userId }],
+  })
+
+  if (componentRecord) {
+    return componentRecord
+  }
+
   const directRecord = await ctx.db.get(userId as Id<"user">)
 
   if (directRecord) {
