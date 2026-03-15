@@ -7,7 +7,6 @@ import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/convex/_generated/api"
 import {
-  preferredLanguageLabels,
   profileSettingsSchema,
   type PreferredLanguage,
   type ProfileSettingsForm as ProfileSettingsPayload,
@@ -43,7 +42,6 @@ export function ProfileSettingsForm({
     saving: string
     saved: string
     helper: string
-    language: string
     age: string
     allergies: string
     conditions: string
@@ -62,7 +60,6 @@ export function ProfileSettingsForm({
   const router = useRouter()
   const updateProfileSettings = useMutation(api.profiles.updateProfileSettings)
   const [form, setForm] = useState(() => ({
-    preferredLanguage: profile.preferredLanguage,
     age: profile.age?.toString() ?? "",
     allergies: (profile.allergies ?? []).join(", "),
     chronicConditions: (profile.chronicConditions ?? []).join(", "),
@@ -76,7 +73,7 @@ export function ProfileSettingsForm({
 
   const normalized = useMemo<ProfileSettingsPayload>(
     () => ({
-      preferredLanguage: form.preferredLanguage,
+      preferredLanguage: profile.preferredLanguage,
       age: form.age ? Number(form.age) : null,
       allergies: stringList(form.allergies),
       chronicConditions: stringList(form.chronicConditions),
@@ -84,7 +81,7 @@ export function ProfileSettingsForm({
       religiousRestrictions: stringList(form.religiousRestrictions),
       emergencyNotes: form.emergencyNotes.trim() || null,
     }),
-    [form]
+    [form, profile.preferredLanguage]
   )
 
   async function handleSubmit() {
@@ -140,26 +137,6 @@ export function ProfileSettingsForm({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="flex flex-col gap-2 text-sm text-foreground">
-            <span>{uiText.language}</span>
-            <select
-              value={form.preferredLanguage}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  preferredLanguage: event.target.value as PreferredLanguage,
-                }))
-              }
-              className="rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10"
-            >
-              {Object.entries(preferredLanguageLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <label className="flex flex-col gap-2 text-sm text-foreground">
             <span>{uiText.age}</span>
             <input

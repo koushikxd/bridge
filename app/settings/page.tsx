@@ -1,7 +1,9 @@
 import Link from "next/link"
 
 import { CompletedOnboardingExtras } from "@/components/app-shell/completed-onboarding-extras"
+import { SignOutButton } from "@/components/auth/sign-out-button"
 import { ReminderPreferencesCard } from "@/components/reminders/reminder-preferences-card"
+import { LocalizationSettingsCard } from "@/components/settings/localization-settings-card"
 import { MedicineSettingsForm } from "@/components/settings/medicine-settings-form"
 import { ProfileSettingsForm } from "@/components/settings/profile-settings-form"
 import { api } from "@/convex/_generated/api"
@@ -10,6 +12,9 @@ import { fetchAuthQuery } from "@/lib/auth-server"
 import { localizedCopyMap } from "@/lib/copy"
 
 type ProfileSettingsText = Parameters<typeof ProfileSettingsForm>[0]["uiText"]
+type LocalizationSettingsText = Parameters<
+  typeof LocalizationSettingsCard
+>[0]["uiText"]
 type MedicineSettingsText = Parameters<typeof MedicineSettingsForm>[0]["uiText"]
 type ReminderSettingsText = Parameters<
   typeof ReminderPreferencesCard
@@ -39,7 +44,6 @@ export default async function SettingsPage() {
       "settings.profile.save",
       "settings.profile.saved",
       "settings.profile.helper",
-      "settings.profile.language",
       "settings.profile.age",
       "settings.profile.allergies",
       "settings.profile.conditions",
@@ -53,6 +57,14 @@ export default async function SettingsPage() {
       "settings.profile.dietaryPlaceholder",
       "settings.profile.religiousPlaceholder",
       "settings.profile.saveError",
+      "settings.localization.eyebrow",
+      "settings.localization.title",
+      "settings.localization.body",
+      "settings.localization.label",
+      "settings.localization.helper",
+      "settings.localization.save",
+      "settings.localization.saved",
+      "settings.localization.saveError",
       "settings.medicines.eyebrow",
       "settings.medicines.title",
       "settings.medicines.body",
@@ -75,6 +87,9 @@ export default async function SettingsPage() {
       "settings.medicines.duration",
       "settings.medicines.saveError",
       "settings.medicines.saving",
+      "settings.logout.eyebrow",
+      "settings.logout.title",
+      "settings.logout.body",
       "settings.reminders.eyebrow",
       "settings.reminders.title",
       "settings.reminders.body",
@@ -92,6 +107,8 @@ export default async function SettingsPage() {
       "settings.reminders.permissionDenied",
       "settings.reminders.permissionUnsupported",
       "settings.reminders.enableAction",
+      "home.signOut",
+      "home.signingOut",
       "onboarding.saving",
     ] as const),
   ])
@@ -111,7 +128,6 @@ export default async function SettingsPage() {
   const profileSave = copy["settings.profile.save"]
   const profileSaved = copy["settings.profile.saved"]
   const profileHelper = copy["settings.profile.helper"]
-  const profileLanguage = copy["settings.profile.language"]
   const profileAge = copy["settings.profile.age"]
   const profileAllergies = copy["settings.profile.allergies"]
   const profileConditions = copy["settings.profile.conditions"]
@@ -130,6 +146,14 @@ export default async function SettingsPage() {
   const profileReligiousPlaceholder =
     copy["settings.profile.religiousPlaceholder"]
   const profileSaveError = copy["settings.profile.saveError"]
+  const localizationEyebrow = copy["settings.localization.eyebrow"]
+  const localizationTitle = copy["settings.localization.title"]
+  const localizationBody = copy["settings.localization.body"]
+  const localizationLabel = copy["settings.localization.label"]
+  const localizationHelper = copy["settings.localization.helper"]
+  const localizationSave = copy["settings.localization.save"]
+  const localizationSaved = copy["settings.localization.saved"]
+  const localizationSaveError = copy["settings.localization.saveError"]
   const medicinesEyebrow = copy["settings.medicines.eyebrow"]
   const medicinesTitle = copy["settings.medicines.title"]
   const medicinesBody = copy["settings.medicines.body"]
@@ -152,6 +176,9 @@ export default async function SettingsPage() {
   const medicinesDuration = copy["settings.medicines.duration"]
   const medicinesSaveError = copy["settings.medicines.saveError"]
   const medicinesSaving = copy["settings.medicines.saving"]
+  const logoutEyebrow = copy["settings.logout.eyebrow"]
+  const logoutTitle = copy["settings.logout.title"]
+  const logoutBody = copy["settings.logout.body"]
   const remindersEyebrow = copy["settings.reminders.eyebrow"]
   const remindersTitle = copy["settings.reminders.title"]
   const remindersBody = copy["settings.reminders.body"]
@@ -170,6 +197,8 @@ export default async function SettingsPage() {
   const remindersPermissionUnsupported =
     copy["settings.reminders.permissionUnsupported"]
   const remindersEnableAction = copy["settings.reminders.enableAction"]
+  const signOutLabel = copy["home.signOut"]
+  const signingOutLabel = copy["home.signingOut"]
   const onboardingSaving = copy["onboarding.saving"]
 
   const profileUiText: ProfileSettingsText = {
@@ -180,7 +209,6 @@ export default async function SettingsPage() {
     saving: onboardingSaving,
     saved: profileSaved,
     helper: profileHelper,
-    language: profileLanguage,
     age: profileAge,
     allergies: profileAllergies,
     conditions: profileConditions,
@@ -194,6 +222,18 @@ export default async function SettingsPage() {
     dietaryPlaceholder: profileDietaryPlaceholder,
     religiousPlaceholder: profileReligiousPlaceholder,
     saveError: profileSaveError,
+  }
+
+  const localizationUiText: LocalizationSettingsText = {
+    eyebrow: localizationEyebrow,
+    title: localizationTitle,
+    body: localizationBody,
+    label: localizationLabel,
+    helper: localizationHelper,
+    save: localizationSave,
+    saving: onboardingSaving,
+    saved: localizationSaved,
+    saveError: localizationSaveError,
   }
 
   const medicineUiText: MedicineSettingsText = {
@@ -287,16 +327,41 @@ export default async function SettingsPage() {
 
         {settingsData ? (
           <>
-            <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-              <ProfileSettingsForm
-                profile={settingsData.profile}
-                uiText={profileUiText}
-              />
-              <MedicineSettingsForm
-                medicines={settingsData.medicines}
-                reminderPreferences={settingsData.reminderPreferences}
-                uiText={medicineUiText}
-              />
+            <div className="grid items-start gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+              <div className="flex flex-col gap-5">
+                <LocalizationSettingsCard
+                  preferredLanguage={settingsData.profile.preferredLanguage}
+                  uiText={localizationUiText}
+                />
+                <ProfileSettingsForm
+                  profile={settingsData.profile}
+                  uiText={profileUiText}
+                />
+              </div>
+              <div className="flex flex-col gap-5">
+                <MedicineSettingsForm
+                  medicines={settingsData.medicines}
+                  reminderPreferences={settingsData.reminderPreferences}
+                  uiText={medicineUiText}
+                />
+                <section className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm">
+                  <p className="text-[0.72rem] font-semibold tracking-[0.24em] text-primary uppercase">
+                    {logoutEyebrow}
+                  </p>
+                  <h2 className="mt-2 text-[1.45rem] font-semibold tracking-tight text-foreground">
+                    {logoutTitle}
+                  </h2>
+                  <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                    {logoutBody}
+                  </p>
+                  <div className="mt-5">
+                    <SignOutButton
+                      label={signOutLabel}
+                      pendingLabel={signingOutLabel}
+                    />
+                  </div>
+                </section>
+              </div>
             </div>
 
             <ReminderPreferencesCard

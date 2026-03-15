@@ -12,12 +12,16 @@ export const getOptionalSessionState = cache(async function getOptionalSessionSt
   }
 
   try {
-    const [authUser, profile] = await Promise.all([
-      fetchAuthQuery(api.auth.getAuthUser),
+    const [sessionUser, profile] = await Promise.all([
+      fetchAuthQuery(api.auth.getSessionUserState),
       fetchAuthQuery(api.profiles.getCurrentProfile),
     ])
 
-    return { authUser, profile }
+    if (!sessionUser.hasPersistedAuthRecord) {
+      return null
+    }
+
+    return { authUser: sessionUser.authUser, profile }
   } catch {
     return null
   }

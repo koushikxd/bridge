@@ -356,6 +356,27 @@ export const updateProfileSettings = mutation({
   },
 })
 
+export const updatePreferredLanguageFromSettings = mutation({
+  args: {
+    preferredLanguage: preferredLanguageValidator,
+  },
+  handler: async (ctx, args) => {
+    const user = await authComponent.getAuthUser(ctx)
+    const profile = await getProfileForUserId(ctx, user._id)
+
+    if (!profile) {
+      throw new Error("Profile not found. Complete language selection first.")
+    }
+
+    await ctx.db.patch(profile._id, {
+      preferredLanguage: args.preferredLanguage,
+      updatedAt: Date.now(),
+    })
+
+    return await ctx.db.get(profile._id)
+  },
+})
+
 export const getLinkedProfiles = query({
   args: {},
   handler: async (ctx) => {
