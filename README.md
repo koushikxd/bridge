@@ -6,8 +6,6 @@ It helps patients and caregivers set up a simple health profile, track medicines
 
 ## Preview
 
-[![Bridge Demo](https://img.youtube.com/vi/p9Zu4Umf0DM/maxresdefault.jpg)](https://youtu.be/p9Zu4Umf0DM)
-
 **[Blog Post](https://dev.to/koushikxd/i-built-bridge-a-multilingual-ai-health-companion-for-everyone-2185)**
 
 ## What Bridge does
