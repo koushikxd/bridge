@@ -4,16 +4,13 @@ import { generateObject } from "ai"
 import {
   artifactAnalysisRequestSchema,
   structuredAnalysisResultSchema,
-  type MedicineEntry,
   type ArtifactAnalysisRequest,
   type PatientProfileContext,
   type StructuredAnalysisResult,
 } from "@/lib/contracts/analysis"
+import { preferredLanguageLabels } from "@/lib/contracts/profile"
 import { extractImageText } from "@/lib/services/ocr"
-import {
-  localizePatientMessages,
-  localizePatientText,
-} from "@/lib/services/localization"
+import { localizeStructuredAnalysisResult } from "@/lib/services/localization"
 
 export const bridgeAnalysisModel = google("gemini-2.5-flash")
 
@@ -34,6 +31,9 @@ function buildProfileSummary(profile?: PatientProfileContext): string {
 }
 
 function buildSystemPrompt(input: ArtifactAnalysisRequest): string {
+  const outputLanguage =
+    preferredLanguageLabels[input.preferredLanguage] ?? "English"
+
   return `You are Bridge, a multilingual health safety companion. Analyze uploaded health images and return concise, structured results.
 
 TASK:
@@ -54,8 +54,8 @@ PATIENT PROFILE:
 ${buildProfileSummary(input.patientProfile)}
 
 RULES:
-- Always do the analysis and final structured output in English.
-- If the image text is in another language, translate it into English before reasoning.
+- You may reason in English internally if helpful, but every user-facing field in the final structured output must be in ${outputLanguage} (${input.preferredLanguage}).
+- If the image text is in another language, translate it as needed before reasoning.
 - Flag any ingredients, allergens, or medicines that conflict with the patient's profile in flaggedAllergens, flaggedIngredients, and matchedProfileRules.
 - Keep wording concise and patient-friendly. No long paragraphs.
 - Never claim to replace medical advice.
@@ -64,7 +64,7 @@ RULES:
 
 function buildUserPrompt(input: ArtifactAnalysisRequest): string {
   const parts = [
-    "Analyze this health-related image and return the structured result in English.",
+    `Analyze this health-related image and return the structured result in ${preferredLanguageLabels[input.preferredLanguage]} (${input.preferredLanguage}).`,
   ]
 
   if (input.extractedText) {
@@ -115,104 +115,12 @@ async function localizeFallbackAnalysis(
   result: StructuredAnalysisResult,
   preferredLanguage: ArtifactAnalysisRequest["preferredLanguage"]
 ) {
-  if (preferredLanguage === "en") {
-    return result
-  }
-
-  const [detectedItem, whyFlagged, suggestedNextAction] =
-    await localizePatientMessages(
-      [result.detectedItem, result.whyFlagged, result.suggestedNextAction],
-      preferredLanguage
-    )
-
-  return { ...result, detectedItem, whyFlagged, suggestedNextAction }
-}
-
-async function localizeStringList(
-  values: string[] | undefined,
-  preferredLanguage: ArtifactAnalysisRequest["preferredLanguage"]
-) {
-  if (!values?.length) {
-    return values
-  }
-
-  return await localizePatientMessages(values, preferredLanguage)
-}
-
-async function localizeMedicineEntries(
-  values: MedicineEntry[] | undefined,
-  preferredLanguage: ArtifactAnalysisRequest["preferredLanguage"]
-) {
-  if (!values?.length) {
-    return values
-  }
-
-  return await Promise.all(
-    values.map(async (value) => ({
-      name: await localizePatientText(value.name, preferredLanguage),
-      dosage: value.dosage
-        ? await localizePatientText(value.dosage, preferredLanguage)
-        : undefined,
-      purpose: value.purpose
-        ? await localizePatientText(value.purpose, preferredLanguage)
-        : undefined,
-      instructions: value.instructions
-        ? await localizePatientText(value.instructions, preferredLanguage)
-        : undefined,
-    }))
-  )
-}
-
-async function localizeAnalysisResult(
-  result: StructuredAnalysisResult,
-  preferredLanguage: ArtifactAnalysisRequest["preferredLanguage"]
-) {
-  if (preferredLanguage === "en") {
-    return result
-  }
-
-  const [
-    detectedItem,
-    whyFlagged,
-    suggestedNextAction,
-    ingredients,
-    allergens,
-    nutritionHighlights,
-    medicines,
-    flaggedAllergens,
-    flaggedIngredients,
-    matchedProfileRules,
-  ] = await Promise.all([
-    localizePatientText(result.detectedItem, preferredLanguage),
-    localizePatientText(result.whyFlagged, preferredLanguage),
-    localizePatientText(result.suggestedNextAction, preferredLanguage),
-    localizeStringList(result.ingredients, preferredLanguage),
-    localizeStringList(result.allergens, preferredLanguage),
-    localizeStringList(result.nutritionHighlights, preferredLanguage),
-    localizeMedicineEntries(result.medicines, preferredLanguage),
-    localizeStringList(result.flaggedAllergens, preferredLanguage),
-    localizeStringList(result.flaggedIngredients, preferredLanguage),
-    localizeStringList(result.matchedProfileRules, preferredLanguage),
-  ])
-
-  return {
-    ...result,
-    detectedItem,
-    whyFlagged,
-    suggestedNextAction,
-    ingredients,
-    allergens,
-    nutritionHighlights,
-    medicines,
-    flaggedAllergens,
-    flaggedIngredients,
-    matchedProfileRules,
-  }
+  return await localizeStructuredAnalysisResult(result, preferredLanguage)
 }
 
 /**
  * Tier 1: Send image directly to Gemini 2.5 Flash for vision analysis.
- * The model reads text in any language from the image and returns English output.
+ * The model reads text in any language from the image and returns structured output.
  */
 async function analyzeWithVision(
   input: ArtifactAnalysisRequest
@@ -241,7 +149,7 @@ async function analyzeWithVision(
 
 /**
  * Tier 2: Run Tesseract OCR then pass extracted text to Gemini for parsing.
- * Gemini still returns English output, which can be localized afterward.
+ * The structured result is normalized to the preferred language afterward.
  * Used when vision analysis fails (rate limit, timeout, etc.).
  */
 async function analyzeWithOcrFallback(
@@ -274,10 +182,10 @@ async function analyzeWithOcrFallback(
 
 /**
  * Main entry point. Two-tier approach:
- * 1. Gemini 2.5 Flash Vision (returns English)
- * 2. Tesseract OCR + Gemini text parsing (returns English)
- * 3. Keyword heuristic (English last resort when AI is unavailable)
- * 4. Lingo localization for non-English users
+ * 1. Gemini 2.5 Flash Vision
+ * 2. Tesseract OCR + Gemini text parsing
+ * 3. Keyword heuristic
+ * 4. Lingo localization guard for non-English users
  */
 export async function analyzeArtifact(input: ArtifactAnalysisRequest): Promise<
   StructuredAnalysisResult & {
@@ -300,7 +208,7 @@ export async function analyzeArtifact(input: ArtifactAnalysisRequest): Promise<
   if (input.imageUrl) {
     try {
       const result = await analyzeWithVision(input)
-      const localizedResult = await localizeAnalysisResult(
+      const localizedResult = await localizeStructuredAnalysisResult(
         result,
         input.preferredLanguage
       )
@@ -313,7 +221,7 @@ export async function analyzeArtifact(input: ArtifactAnalysisRequest): Promise<
   // Tier 2: OCR + Gemini text parsing
   try {
     const result = await analyzeWithOcrFallback(input)
-    const localizedResult = await localizeAnalysisResult(
+    const localizedResult = await localizeStructuredAnalysisResult(
       result,
       input.preferredLanguage
     )
